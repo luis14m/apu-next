@@ -66,6 +66,9 @@ src/app/page.tsx
 src/components/ui/button.tsx
 src/components/ui/checkbox.tsx
 src/components/ui/dialog.tsx
+src/components/ui/form.tsx
+src/components/ui/input.tsx
+src/components/ui/label.tsx
 src/components/ui/table.tsx
 src/lib/supabase.ts
 src/lib/utils.ts
@@ -194,8 +197,10 @@ File: package.json
     "lint": "next lint"
   },
   "dependencies": {
+    "@hookform/resolvers": "^4.1.3",
     "@radix-ui/react-checkbox": "^1.1.4",
     "@radix-ui/react-dialog": "^1.1.6",
+    "@radix-ui/react-label": "^2.1.2",
     "@radix-ui/react-slot": "^1.1.2",
     "@supabase/supabase-js": "^2.49.1",
     "@tanstack/react-table": "^8.21.2",
@@ -205,8 +210,10 @@ File: package.json
     "next": "15.2.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-hook-form": "^7.54.2",
     "tailwind-merge": "^3.0.2",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -300,17 +307,26 @@ File: src/app/actividades/columns.tsx
 ================
 "use client";
 import { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, ArrowUpRight, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, ArrowUpRight, Pencil, Trash2, CheckIcon, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-
-
 import { useState } from "react";
-
 import { Actividad } from "@/types/actividad";
-import { Dialog, DialogContent } from "@radix-ui/react-dialog";
-import { deleteActividad } from "@/services/actividadService";
+
+import { deleteActividad, updateActividad } from "@/services/actividadService";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { memo } from "react";
+import { Dialog, DialogTrigger, DialogContent } from "@/components/ui/dialog";
+
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
 
 interface DialogProps {
   open: boolean;
@@ -318,24 +334,46 @@ interface DialogProps {
   actividad: Actividad;
 }
 
-const handleDelete = async (id: string) => {
-    if (!window.confirm("¿Estás seguro de eliminar?"))
-      return;
-  
-    try {
-      await deleteActividad(id);
-      window.location.reload();
-    } catch (error) {
-      console.error("Error al eliminar el gasto:", error);
-      alert("Hubo un error al eliminar el gasto");
-    }
-    
+
+
+
+const EditableCell = memo(({ value, onSave }: { value: string; onSave: (newValue: string) => void }) => {
+  const [editingValue, setEditingValue] = useState(value);
+
+  const handleSave = () => {
+    onSave(editingValue);
   };
-  
-  export const columns: ColumnDef<Actividad>[] = [
 
+  return (
+    <div className="flex gap-2">
+      <Input
+        value={editingValue}
+        onChange={(e) => setEditingValue(e.target.value)}
+        autoFocus
+      />
+      <Button variant="ghost" size="icon" onClick={handleSave}>
+        <CheckIcon className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+});
+
+export default EditableCell;
+
+const handleDelete = async (id: string) => {
+  if (!window.confirm("¿Estás seguro de eliminar?")) return;
+
+  try {
+    await deleteActividad(id);
+    window.location.reload();
+  } catch (error) {
+    console.error("Error al eliminar el gasto:", error);
+    alert("Hubo un error al eliminar el gasto");
+  }
+};
+
+export const columns: ColumnDef<Actividad>[] = [
   {
-
     id: "select",
     header: ({ table }) => (
       <Checkbox
@@ -357,55 +395,112 @@ const handleDelete = async (id: string) => {
     enableSorting: false,
     enableHiding: false,
   },
-
-    {
-        id: "codigo",
-        accessorKey: "codigo",   
-        header: "Código",
-      
+  {
+    id: "codigo",
+    accessorKey: "codigo",
+    header: "Código",
+  },
+  {
+    id: "nombre",
+    accessorKey: "nombre",
+    header: "Nombre",
+    cell: ({ row }) => {
+      const [isEditing, setIsEditing] = useState(false);
+      const actividad = row.original;
+  
+      const handleSave = async (newValue: string) => {
+        const updatedActividad = { ...actividad, nombre: newValue };
+        try {
+          await updateActividad(updatedActividad.id, updatedActividad);
+          setIsEditing(false);
+          window.location.reload();
+        } catch (error) {
+          console.error("Error al actualizar la actividad:", error);
+          alert("Hubo un error al actualizar la actividad");
+        }
+      };
+  
+      return isEditing ? (
+        <EditableCell value={actividad.nombre} onSave={handleSave} />
+      ) : (
+        <span onClick={() => setIsEditing(true)}>{actividad.nombre}</span>
+      );
     },
-
-    {
-      id: "nombre", 
-      accessorKey: "nombre",
-      header: "Nombre",
-    },
-    {
-      id: "descripcion",
-      accessorKey: "descripcion",
-      header: "Descripción",
-    },
-    {
-      id: "unidad",
-      accessorKey: "unidad",
-      header: "Unidad",
-    
-    },
-    {
-      id: "acciones",
-      header: "Acciones",
-      cell: ({ row }) => {
-        const [open, setOpen] = useState(false);
-        const actividad = row.original;
-        return (
-          <>
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogContent>
-                {/* Add your dialog content here */}
-              </DialogContent>
-            </Dialog>
+  },
+  {
+    id: "descripcion",
+    accessorKey: "descripcion",
+    header: "Descripción",
+  },
+  {
+    id: "unidad",
+    accessorKey: "unidad",
+    header: "Unidad",
+  },
+  {
+    id: "acciones",
+    header: "Acciones",
+    cell: ({ row }) => {
+      const [isEditing, setIsEditing] = useState(false);
+      const actividad = row.original;
+  
+      const handleSave = async (updatedActividad: Actividad) => {
+        try {
+          await updateActividad(updatedActividad.id, updatedActividad);
+          setIsEditing(false);
+          window.location.reload();
+        } catch (error) {
+          console.error("Error al actualizar la actividad:", error);
+          alert("Hubo un error al actualizar la actividad");
+        }
+      };
+  
+      return (
+        <div className="flex gap-2">
+          {/* Botón Nuevo con Modal */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <PlusIcon className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <Form /> {/* Formulario para crear una nueva actividad */}
+            </DialogContent>
+          </Dialog>
+  
+          {/* Botón Editar */}
+          {isEditing ? (
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => handleDelete(actividad.id.toString())}
+              onClick={() => handleSave(actividad)}
             >
-              <Trash2 className="h-4 w-4" />
+              <CheckIcon className="h-4 w-4" />
             </Button>
-          </>
-        );
-      },
-    },  
-  ];
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsEditing(true)}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
+  
+          {/* Botón Eliminar */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleDelete(actividad.id.toString())}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      );
+    },
+  },
+];
 
 ================
 File: src/app/actividades/data-table.tsx
@@ -1032,6 +1127,230 @@ export {
 }
 
 ================
+File: src/components/ui/form.tsx
+================
+"use client"
+
+import * as React from "react"
+import * as LabelPrimitive from "@radix-ui/react-label"
+import { Slot } from "@radix-ui/react-slot"
+import {
+  Controller,
+  FormProvider,
+  useFormContext,
+  useFormState,
+  type ControllerProps,
+  type FieldPath,
+  type FieldValues,
+} from "react-hook-form"
+
+import { cn } from "@/lib/utils"
+import { Label } from "@/components/ui/label"
+
+const Form = FormProvider
+
+type FormFieldContextValue<
+  TFieldValues extends FieldValues = FieldValues,
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
+> = {
+  name: TName
+}
+
+const FormFieldContext = React.createContext<FormFieldContextValue>(
+  {} as FormFieldContextValue
+)
+
+const FormField = <
+  TFieldValues extends FieldValues = FieldValues,
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
+>({
+  ...props
+}: ControllerProps<TFieldValues, TName>) => {
+  return (
+    <FormFieldContext.Provider value={{ name: props.name }}>
+      <Controller {...props} />
+    </FormFieldContext.Provider>
+  )
+}
+
+const useFormField = () => {
+  const fieldContext = React.useContext(FormFieldContext)
+  const itemContext = React.useContext(FormItemContext)
+  const { getFieldState } = useFormContext()
+  const formState = useFormState({ name: fieldContext.name })
+  const fieldState = getFieldState(fieldContext.name, formState)
+
+  if (!fieldContext) {
+    throw new Error("useFormField should be used within <FormField>")
+  }
+
+  const { id } = itemContext
+
+  return {
+    id,
+    name: fieldContext.name,
+    formItemId: `${id}-form-item`,
+    formDescriptionId: `${id}-form-item-description`,
+    formMessageId: `${id}-form-item-message`,
+    ...fieldState,
+  }
+}
+
+type FormItemContextValue = {
+  id: string
+}
+
+const FormItemContext = React.createContext<FormItemContextValue>(
+  {} as FormItemContextValue
+)
+
+function FormItem({ className, ...props }: React.ComponentProps<"div">) {
+  const id = React.useId()
+
+  return (
+    <FormItemContext.Provider value={{ id }}>
+      <div
+        data-slot="form-item"
+        className={cn("grid gap-2", className)}
+        {...props}
+      />
+    </FormItemContext.Provider>
+  )
+}
+
+function FormLabel({
+  className,
+  ...props
+}: React.ComponentProps<typeof LabelPrimitive.Root>) {
+  const { error, formItemId } = useFormField()
+
+  return (
+    <Label
+      data-slot="form-label"
+      data-error={!!error}
+      className={cn("data-[error=true]:text-destructive-foreground", className)}
+      htmlFor={formItemId}
+      {...props}
+    />
+  )
+}
+
+function FormControl({ ...props }: React.ComponentProps<typeof Slot>) {
+  const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
+
+  return (
+    <Slot
+      data-slot="form-control"
+      id={formItemId}
+      aria-describedby={
+        !error
+          ? `${formDescriptionId}`
+          : `${formDescriptionId} ${formMessageId}`
+      }
+      aria-invalid={!!error}
+      {...props}
+    />
+  )
+}
+
+function FormDescription({ className, ...props }: React.ComponentProps<"p">) {
+  const { formDescriptionId } = useFormField()
+
+  return (
+    <p
+      data-slot="form-description"
+      id={formDescriptionId}
+      className={cn("text-muted-foreground text-sm", className)}
+      {...props}
+    />
+  )
+}
+
+function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
+  const { error, formMessageId } = useFormField()
+  const body = error ? String(error?.message ?? "") : props.children
+
+  if (!body) {
+    return null
+  }
+
+  return (
+    <p
+      data-slot="form-message"
+      id={formMessageId}
+      className={cn("text-destructive-foreground text-sm", className)}
+      {...props}
+    >
+      {body}
+    </p>
+  )
+}
+
+export {
+  useFormField,
+  Form,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormDescription,
+  FormMessage,
+  FormField,
+}
+
+================
+File: src/components/ui/input.tsx
+================
+import * as React from "react"
+
+import { cn } from "@/lib/utils"
+
+function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+  return (
+    <input
+      type={type}
+      data-slot="input"
+      className={cn(
+        "border-input file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+        "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
+        "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+export { Input }
+
+================
+File: src/components/ui/label.tsx
+================
+"use client"
+
+import * as React from "react"
+import * as LabelPrimitive from "@radix-ui/react-label"
+
+import { cn } from "@/lib/utils"
+
+function Label({
+  className,
+  ...props
+}: React.ComponentProps<typeof LabelPrimitive.Root>) {
+  return (
+    <LabelPrimitive.Root
+      data-slot="label"
+      className={cn(
+        "flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+export { Label }
+
+================
 File: src/components/ui/table.tsx
 ================
 "use client"
@@ -1234,7 +1553,7 @@ export async function getActividadById(id: string): Promise<Actividad | null> {
 }
 
 export async function updateActividad(
-  id: string,
+  id: number,
   Actividad: Partial<Actividad>
 ): Promise<void> {
   try {

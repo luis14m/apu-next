@@ -24,3 +24,11 @@ export interface ActividadCreate {
     unidad: string;
     precio_unitario: number;
 } 
+
+export const UNIDADES = [
+
+    "ML",
+    "M²",	
+    "M³",
+    
+] as const;

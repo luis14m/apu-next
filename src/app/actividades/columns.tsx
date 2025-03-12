@@ -20,6 +20,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
+import NewActivityForm from "./NewActivityForm";
+
 
 interface DialogProps {
   open: boolean;
@@ -139,7 +141,7 @@ export const columns: ColumnDef<Actividad>[] = [
   
       const handleSave = async (updatedActividad: Actividad) => {
         try {
-          await updateActividad(updatedActividad.id.toString(), updatedActividad);
+          await updateActividad(updatedActividad.id, updatedActividad);
           setIsEditing(false);
           window.location.reload();
         } catch (error) {
@@ -151,16 +153,7 @@ export const columns: ColumnDef<Actividad>[] = [
       return (
         <div className="flex gap-2">
           {/* Botón Nuevo con Modal */}
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <PlusIcon className="h-4 w-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <Form /> {/* Formulario para crear una nueva actividad */}
-            </DialogContent>
-          </Dialog>
+          <NewActivityForm /> {/* Aquí llamas al componente NewActivityForm */}
   
           {/* Botón Editar */}
           {isEditing ? (
@@ -192,5 +185,5 @@ export const columns: ColumnDef<Actividad>[] = [
         </div>
       );
     },
-  },
+  }
 ];
