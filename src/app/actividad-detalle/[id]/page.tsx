@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { getActividadById } from "@/services/actividadService";
+import { getActividadById, updateActividad } from "@/services/actividadService";
 import {
   getElementosNoAsignados,
   getElementosAsignados,
@@ -61,18 +61,24 @@ export default function ActividadDetallePage() {
     loadElementosDisponibles();
   }, [mostrarAsignarElemento, actividad]);
 
-  // Función para asignar un elemento a la actividad
   const handleAsignarElemento = async (elemento: Elemento) => {
     if (!actividad?.id || !elemento?.id) return;
-
+  
     setLoading(true);
     try {
+      // Asignar el elemento a la actividad
       await asignarElemento(actividad.id, elemento.id);
-
-      // Actualizar el precio unitario de la actividad
-      const updatedActividad = { ...actividad, precio_unitario: actividad.precio_unitario + elemento.precio_unitario };
+  
+      // Calcular el nuevo precio unitario
+      const nuevoPrecioUnitario = actividad.precio_unitario + elemento.precio_unitario;
+  
+      // Actualizar el precio unitario en la base de datos
+      await updateActividad(actividad.id, { precio_unitario: nuevoPrecioUnitario });
+  
+      // Actualizar el estado local de la actividad
+      const updatedActividad = { ...actividad, precio_unitario: nuevoPrecioUnitario };
       setActividad(updatedActividad);
-
+  
       // Actualizar las listas de elementos
       setElementosDisponibles((prev) => prev.filter((e) => e.id !== elemento.id));
       setElementosAsignados((prev) => [...prev, elemento]);

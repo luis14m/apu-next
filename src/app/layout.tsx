@@ -51,6 +51,11 @@ export default function RootLayout({
                 Elementos
               </NavigationMenuLink>
             </Link>
+            <Link href="/resumen" legacyBehavior passHref>
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                Resumen
+              </NavigationMenuLink>
+            </Link>
           </NavigationMenuItem>
         </NavigationMenu>
 

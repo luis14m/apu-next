@@ -46,6 +46,7 @@ Additional Info:
 Directory Structure
 ================================================================
 .gitignore
+actividad-detalle.txt
 components.json
 eslint.config.mjs
 Estructura.md
@@ -58,6 +59,7 @@ public/next.svg
 public/vercel.svg
 public/window.svg
 README.md
+src/app/actividad-detalle/[id]/page.tsx
 src/app/actividades/columns.tsx
 src/app/actividades/NewActivityForm.tsx
 src/app/actividades/page.tsx
@@ -67,6 +69,7 @@ src/app/elementos/page.tsx
 src/app/globals.css
 src/app/layout.tsx
 src/app/page.tsx
+src/app/resumen/page.tsx
 src/components/ui/button.tsx
 src/components/ui/checkbox.tsx
 src/components/ui/data-table-pagination.tsx
@@ -137,6 +140,251 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+================
+File: actividad-detalle.txt
+================
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { ActividadService} from '../../services/actividad.service';
+import { ElementoService } from '../../services/elemento.service'; // Importa el servicio de elementos
+import { Actividad } from '../../../shared/models/actividad.model';
+import { Elemento } from '../../../shared/models/elemento.model'; // Importa la interfaz Elemento
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+
+@Component({
+  selector: 'app-actividad-detalle',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './actividad-detalle.component.html',
+  styleUrls: ['./actividad-detalle.component.css'],
+ 
+ 
+})
+export class ActividadDetalleComponent implements OnInit {
+  actividad: Actividad | null = null;
+  elementos: Elemento[] = [];
+  elementosAsignados: Elemento[] = [];
+  mostrarAsignarElemento: boolean = false;
+  loading: boolean = false; // Add loading state property to your component
+  
+  searchTerm:string='';
+
+  columns = [
+    { prop: 'codigo', name: 'Codigo' },
+    { prop: 'nombre', name: 'Nombre' },
+  ];
+
+  constructor(
+    private route: ActivatedRoute,
+    private actividadService: ActividadService,
+    private elementoService: ElementoService // Inyecta el servicio de elementos
+  ) {}
+
+  async ngOnInit() {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
+      await this.loadActividad(Number(id));
+      await this.loadElementosAsignados(Number(id));
+    }
+  }
+
+  async loadActividad(id: number) {
+    try {
+      this.actividad = await this.actividadService.getActividadById(id);
+    } catch (error) {
+      console.error('Error cargando actividad:', error);
+    }
+  }
+
+  async loadElementosDisponibles() {
+    try {
+      this.elementos = await this.elementoService.getElementosNoAsignados(this.actividad?.id!);
+    } catch (error) {
+      console.error('Error cargando elementos:', error);
+    }
+  }
+
+  async loadElementosAsignados(actividadId: number) {
+    try {
+      this.elementosAsignados = await this.actividadService.getElementosAsignados(actividadId);
+    } catch (error) {
+      console.error('Error cargando elementos asignados:', error);
+    }
+  }
+
+  async toggleAsignarElemento() {
+    this.mostrarAsignarElemento = !this.mostrarAsignarElemento;
+    if (this.mostrarAsignarElemento) {
+      await this.loadElementosDisponibles();
+    }
+  }
+
+  async asignarElemento(elemento: Elemento) {
+    if (!this.actividad?.id || !elemento?.id) {
+      console.warn('Actividad ID or Elemento ID is missing');
+      return;
+    }
+  
+    try {
+      this.loading = true; // Add loading state property to your component
+      await this.actividadService.asignarElemento(this.actividad.id, elemento.id);
+
+      this.actividad.precio_unitario+=elemento.precio_unitario;
+      
+      this.elementos = this.elementos.filter(e => e.id !== elemento.id);
+      this.elementosAsignados = [...this.elementosAsignados, elemento];
+      
+      //alert('Elemento asignado correctamente');
+      
+    } catch (error: unknown) {
+      console.error('Error asignando elemento:', error);
+      //alert('Error al asignar elemento');
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  async desasignarElemento(elementoId: number) {
+    if (!this.actividad) return;
+
+    try {
+      await this.actividadService.desasignarElemento(this.actividad.id, elementoId);
+      
+      
+      // Actualizar listas
+      const elemento = this.elementosAsignados.find(e => e.id === elementoId);
+      
+      if (elemento) {
+        this.actividad.precio_unitario-=elemento.precio_unitario;
+        this.elementosAsignados = this.elementosAsignados.filter(e => e.id !== elementoId);
+        this.elementos = [...this.elementos, elemento];
+      }
+      
+      //alert('Elemento desasignado correctamente');
+    } catch (error) {
+      console.error('Error desasignando elemento:', error);
+      //alert('Error al desasignar elemento');
+    }
+  }
+
+  filteredData() {
+    return this.elementos.filter((item) =>
+      Object.values(item).some((value) =>
+        value.toString().toLowerCase().includes(this.searchTerm.toLowerCase())
+      )
+    );
+  }
+}
+  
+
+return(
+<div class="container">
+  <div class="container text-center" style="margin: 20px">
+    <h3>Detalle de la Actividad</h3>
+  </div>
+  <div *ngIf="actividad; else noData">
+    <table class="table table-hover">
+      <thead class="table-secondary">
+        <tr>
+          <th scope="col">Codigo</th>
+          <th scope="col">Nombre</th>
+          <th scope="col">Unidad</th>
+          <th scope="col">Precio Unitario</th>
+          <th scope="col">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{{ actividad.codigo }}</td>
+          <td>{{ actividad.nombre }}</td>
+          <td>{{ actividad.unidad }}</td>
+          <td>{{ actividad.precio_unitario |currency }}</td>
+          <td>
+            <!-- Botón para mostrar/ocultar la sección de "asignar elemento" -->
+            <button (click)="toggleAsignarElemento()">
+              {{ mostrarAsignarElemento ? "Ocultar" : "Asignar" }}
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <!-- Tabla de elementos asignados -->
+  <div class="seccion-asignados">
+    <h3>Elementos asignados</h3>
+    <div class="tabla-con-scroll">
+      <table *ngIf="elementosAsignados.length > 0; else sinAsignados">
+        <thead>
+          <tr>
+            <th>Codigo</th>
+            <th>Nombre</th>
+            <th>Unidad</th>
+            <th>Precio Unitario</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let elemento of elementosAsignados">
+            <td>{{elemento.codigo}}</td>
+            <td>{{ elemento.nombre }}</td>
+            <td>{{ elemento.unidad }}</td>
+            <td>{{ elemento.precio_unitario | currency }}</td>
+            <td>
+              <button (click)="desasignarElemento(elemento.id!)">Quitar</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #sinAsignados>
+        <p>No hay elementos asignados a esta actividad</p>
+      </ng-template>
+    </div>
+  </div>
+
+  <!-- Tabla de elementos disponibles -->
+  <div *ngIf="mostrarAsignarElemento" class="seccion-disponibles">
+    <h3>Listado de Elementos a Asignar</h3>
+    <div class="container text-end" style="margin: 10px">
+      <input type="text" [(ngModel)]="searchTerm" placeholder="Buscar..." />
+    </div>
+    <div class="tabla-con-scroll">
+      <table *ngIf="elementos.length > 0; else sinDisponibles">
+        <thead>
+          <tr>
+            <th>Codigo</th>
+            <th>Nombre</th>
+            <th>Unidad</th>
+            <th>Precio Unitario</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let elemento of filteredData()">
+            <td>{{elemento.codigo}}</td>
+            <td>{{ elemento.nombre }}</td>
+            <td>{{elemento.unidad}}</td>
+            <td>{{ elemento.precio_unitario | currency }}</td>
+            <td>
+              <button (click)="asignarElemento(elemento)">Asignar</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #sinDisponibles>
+        <p>No hay elementos disponibles para asignar</p>
+      </ng-template>
+    </div>
+  </div>
+</div>
+<br>
+<br>
+
+
+
+
+)
 
 ================
 File: components.json
@@ -507,20 +755,283 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
 ================
+File: src/app/actividad-detalle/[id]/page.tsx
+================
+// src/app/actividad-detalle/[id]/page.tsx
+"use client"; // Marcar como componente del cliente
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { Actividad } from "@/types/actividad";
+import { Elemento } from "@/types/elemento";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+import { getActividadById, updateActividad } from "@/services/actividadService";
+import {
+  getElementosNoAsignados,
+  getElementosAsignados,
+  asignarElemento,
+  desasignarElemento,
+} from "@/services/actividad-elemento";
+
+export default function ActividadDetallePage() {
+  const { id } = useParams(); // Obtener el ID de la URL
+  const [actividad, setActividad] = useState<Actividad | null>(null);
+  const [elementosAsignados, setElementosAsignados] = useState<Elemento[]>([]);
+  const [elementosDisponibles, setElementosDisponibles] = useState<Elemento[]>([]);
+  const [mostrarAsignarElemento, setMostrarAsignarElemento] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // Cargar la actividad y los elementos asignados al montar el componente
+  useEffect(() => {
+    const loadData = async () => {
+      if (id) {
+        const actividadId = Number(id);
+        const actividad = await getActividadById(actividadId);
+        setActividad(actividad);
+  
+        const elementosAsignados = await getElementosAsignados(actividadId);
+        setElementosAsignados(elementosAsignados);
+      }
+    };
+  
+    loadData();
+  }, [id]);
+
+  // Cargar elementos disponibles cuando se muestra la sección de asignar
+  useEffect(() => {
+    const loadElementosDisponibles = async () => {
+      if (mostrarAsignarElemento && actividad?.id) {
+        const elementos = await getElementosNoAsignados(actividad.id);
+        setElementosDisponibles(elementos);
+      }
+    };
+
+    loadElementosDisponibles();
+  }, [mostrarAsignarElemento, actividad]);
+
+  const handleAsignarElemento = async (elemento: Elemento) => {
+    if (!actividad?.id || !elemento?.id) return;
+  
+    setLoading(true);
+    try {
+      // Asignar el elemento a la actividad
+      await asignarElemento(actividad.id, elemento.id);
+  
+      // Calcular el nuevo precio unitario
+      const nuevoPrecioUnitario = actividad.precio_unitario + elemento.precio_unitario;
+  
+      // Actualizar el precio unitario en la base de datos
+      await updateActividad(actividad.id, { precio_unitario: nuevoPrecioUnitario });
+  
+      // Actualizar el estado local de la actividad
+      const updatedActividad = { ...actividad, precio_unitario: nuevoPrecioUnitario };
+      setActividad(updatedActividad);
+  
+      // Actualizar las listas de elementos
+      setElementosDisponibles((prev) => prev.filter((e) => e.id !== elemento.id));
+      setElementosAsignados((prev) => [...prev, elemento]);
+    } catch (error) {
+      console.error("Error asignando elemento:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Función para desasignar un elemento de la actividad
+  const handleDesasignarElemento = async (elementoId: number) => {
+    if (!actividad?.id) return;
+
+    try {
+      await desasignarElemento(actividad.id, elementoId);
+
+      // Actualizar el precio unitario de la actividad
+      const elemento = elementosAsignados.find((e) => e.id === elementoId);
+      if (elemento) {
+        const updatedActividad = { ...actividad, precio_unitario: actividad.precio_unitario - elemento.precio_unitario };
+        setActividad(updatedActividad);
+      }
+
+      // Actualizar las listas de elementos
+      setElementosAsignados((prev) => prev.filter((e) => e.id !== elementoId));
+      setElementosDisponibles((prev) => [...prev, ...elementosAsignados.filter((e) => e.id === elementoId)]);
+    } catch (error) {
+      console.error("Error desasignando elemento:", error);
+    }
+  };
+
+  // Filtrar elementos disponibles según el término de búsqueda
+  const filteredElementos = elementosDisponibles.filter((elemento) =>
+    Object.values(elemento).some((value) =>
+      value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  );
+
+  if (!actividad) {
+    return <div>Cargando...</div>;
+  }
+
+  return (
+    <div className="container mx-auto py-10">
+      <div className="text-center mb-8">
+        <h1 className="text-2xl font-bold">Detalle de la Actividad</h1>
+      </div>
+
+      {/* Detalles de la actividad */}
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Código</TableHead>
+            <TableHead>Nombre</TableHead>
+            <TableHead>Unidad</TableHead>
+            <TableHead>Precio Unitario</TableHead>
+            <TableHead>Acciones</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableRow>
+            <TableCell>{actividad.codigo}</TableCell>
+            <TableCell>{actividad.nombre}</TableCell>
+            <TableCell>{actividad.unidad}</TableCell>
+            <TableCell>{actividad.precio_unitario}</TableCell>
+            <TableCell>
+              <Button onClick={() => setMostrarAsignarElemento(!mostrarAsignarElemento)}>
+                {mostrarAsignarElemento ? "Ocultar" : "Asignar"}
+              </Button>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+
+      {/* Elementos asignados */}
+      <div className="mt-8">
+        <h2 className="text-xl font-bold mb-4">Elementos Asignados</h2>
+        {elementosAsignados.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Código</TableHead>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Unidad</TableHead>
+                <TableHead>Precio Unitario</TableHead>
+                <TableHead>Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {elementosAsignados.map((elemento) => (
+                <TableRow key={elemento.id}>
+                  <TableCell>{elemento.codigo}</TableCell>
+                  <TableCell>{elemento.nombre}</TableCell>
+                  <TableCell>{elemento.unidad}</TableCell>
+                  <TableCell>{elemento.precio_unitario}</TableCell>
+                  <TableCell>
+                    <Button onClick={() => handleDesasignarElemento(elemento.id!)}>
+                      Quitar
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <p>No hay elementos asignados a esta actividad.</p>
+        )}
+      </div>
+
+      {/* Elementos disponibles para asignar */}
+      {mostrarAsignarElemento && (
+        <div className="mt-8">
+          <h2 className="text-xl font-bold mb-4">Elementos Disponibles</h2>
+          <div className="flex justify-end">
+            <input
+              type="text"
+              placeholder="Buscar..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              
+            />
+          </div>
+          {filteredElementos.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Código</TableHead>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Unidad</TableHead>
+                  <TableHead>Precio Unitario</TableHead>
+                  <TableHead>Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredElementos.map((elemento) => (
+                  <TableRow key={elemento.id}>
+                    <TableCell>{elemento.codigo}</TableCell>
+                    <TableCell>{elemento.nombre}</TableCell>
+                    <TableCell>{elemento.unidad}</TableCell>
+                    <TableCell>{elemento.precio_unitario}</TableCell>
+                    <TableCell>
+                      <Button onClick={() => handleAsignarElemento(elemento)}>
+                        Asignar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <p>No hay elementos disponibles para asignar.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+================
 File: src/app/actividades/columns.tsx
 ================
 "use client";
 import { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, ArrowUpRight, Pencil, Trash2, CheckIcon, PlusIcon } from "lucide-react";
+import {
+  MoreHorizontal,
+  ArrowUpRight,
+  Pencil,
+  Trash2,
+  CheckIcon,
+  PlusIcon,
+} from "lucide-react";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { Actividad } from "@/types/actividad";
+import { Actividad, UNIDADES } from "@/types/actividad";
+import Link from "next/link";
 
 import { deleteActividad, updateActividad } from "@/services/actividadService";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { memo } from "react";
-import { Dialog, DialogTrigger, DialogContent } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import {
   Form,
@@ -530,9 +1041,8 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
+} from "@/components/ui/form";
 import NewActivityForm from "./NewActivityForm";
-
 
 interface DialogProps {
   open: boolean;
@@ -540,29 +1050,34 @@ interface DialogProps {
   actividad: Actividad;
 }
 
+const EditableCell = memo(
+  ({
+    value,
+    onSave,
+  }: {
+    value: string;
+    onSave: (newValue: string) => void;
+  }) => {
+    const [editingValue, setEditingValue] = useState(value);
 
+    const handleSave = () => {
+      onSave(editingValue);
+    };
 
-
-const EditableCell = memo(({ value, onSave }: { value: string; onSave: (newValue: string) => void }) => {
-  const [editingValue, setEditingValue] = useState(value);
-
-  const handleSave = () => {
-    onSave(editingValue);
-  };
-
-  return (
-    <div className="flex gap-2">
-      <Input
-        value={editingValue}
-        onChange={(e) => setEditingValue(e.target.value)}
-        autoFocus
-      />
-      <Button variant="ghost" size="icon" onClick={handleSave}>
-        <CheckIcon className="h-4 w-4" />
-      </Button>
-    </div>
-  );
-});
+    return (
+      <div className="flex gap-2">
+        <Input
+          value={editingValue}
+          onChange={(e) => setEditingValue(e.target.value)}
+          autoFocus
+        />
+        <Button variant="ghost" size="icon" onClick={handleSave}>
+          <CheckIcon className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  }
+);
 
 export default EditableCell;
 
@@ -606,6 +1121,17 @@ export const columns: ColumnDef<Actividad>[] = [
     accessorKey: "codigo",
     header: "Código",
     enableGlobalFilter: true,
+    cell: ({ row }) => {
+      const actividad = row.original;
+      return (
+        <Link
+          href={`/actividad-detalle/${actividad.id}`} // Ruta dinámica
+          className="text-blue-500 hover:underline"
+        >
+          {actividad.codigo}
+        </Link>
+      );
+    },
   },
   {
     id: "nombre",
@@ -613,25 +1139,14 @@ export const columns: ColumnDef<Actividad>[] = [
     enableGlobalFilter: true,
     header: "Nombre",
     cell: ({ row }) => {
-      const [isEditing, setIsEditing] = useState(false);
       const actividad = row.original;
-  
-      const handleSave = async (newValue: string) => {
-        const updatedActividad = { ...actividad, nombre: newValue };
-        try {
-          await updateActividad(updatedActividad.id, updatedActividad);
-          setIsEditing(false);
-          window.location.reload();
-        } catch (error) {
-          console.error("Error al actualizar la actividad:", error);
-          alert("Hubo un error al actualizar la actividad");
-        }
-      };
-  
-      return isEditing ? (
-        <EditableCell value={actividad.nombre} onSave={handleSave} />
-      ) : (
-        <span onClick={() => setIsEditing(true)}>{actividad.nombre}</span>
+      return (
+        <Link
+          href={`/actividad-detalle/${actividad.id}`} // Ruta dinámica
+          className="text-blue-500 hover:underline"
+        >
+          {actividad.nombre}
+        </Link>
       );
     },
   },
@@ -653,11 +1168,25 @@ export const columns: ColumnDef<Actividad>[] = [
       const [isEditing, setIsEditing] = useState(false);
       const actividad = row.original;
   
-      const handleSave = async (updatedActividad: Actividad) => {
+      // Estados para los campos editables
+      const [codigoEditado, setCodigoEditado] = useState(actividad.codigo);
+      const [nombreEditado, setNombreEditado] = useState(actividad.nombre);
+      const [descripcionEditada, setDescripcionEditada] = useState(actividad.descripcion);
+      const [unidadEditada, setUnidadEditada] = useState(actividad.unidad);
+  
+      const handleSave = async () => {
+        const updatedActividad = {
+          ...actividad,
+          codigo: codigoEditado,
+          nombre: nombreEditado,
+          descripcion: descripcionEditada,
+          unidad: unidadEditada,
+        };
+  
         try {
           await updateActividad(updatedActividad.id, updatedActividad);
           setIsEditing(false);
-          window.location.reload();
+          window.location.reload(); // Recargar la página para reflejar los cambios
         } catch (error) {
           console.error("Error al actualizar la actividad:", error);
           alert("Hubo un error al actualizar la actividad");
@@ -666,25 +1195,14 @@ export const columns: ColumnDef<Actividad>[] = [
   
       return (
         <div className="flex gap-2">
-          
           {/* Botón Editar */}
-          {isEditing ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleSave(actividad)}
-            >
-              <CheckIcon className="h-4 w-4" />
-            </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsEditing(true)}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsEditing(true)}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
   
           {/* Botón Eliminar */}
           <Button
@@ -694,10 +1212,79 @@ export const columns: ColumnDef<Actividad>[] = [
           >
             <Trash2 className="h-4 w-4" />
           </Button>
+  
+          {/* Diálogo de edición */}
+          <Dialog open={isEditing} onOpenChange={setIsEditing}>
+            <DialogContent>
+              <DialogTitle>Editar Actividad</DialogTitle>
+              <div className="space-y-4">
+                {/* Campo Código */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Código</label>
+                  <Input
+                    value={codigoEditado}
+                    onChange={(e) => setCodigoEditado(e.target.value)}
+                    placeholder="Código"
+                  />
+                </div>
+  
+                {/* Campo Nombre */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Nombre</label>
+                  <Input
+                    value={nombreEditado}
+                    onChange={(e) => setNombreEditado(e.target.value)}
+                    placeholder="Nombre"
+                  />
+                </div>
+  
+                {/* Campo Descripción */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Descripción</label>
+                  <Input
+                    value={descripcionEditada}
+                    onChange={(e) => setDescripcionEditada(e.target.value)}
+                    placeholder="Descripción"
+                  />
+                </div>
+  
+                {/* Campo Unidad (Select) */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Unidad</label>
+                  <Select
+                    value={unidadEditada}
+                    onValueChange={(value) => setUnidadEditada(value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona una unidad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {UNIDADES.map((unidad) => (
+                        <SelectItem key={unidad} value={unidad}>
+                          {unidad}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+  
+                {/* Botones de acción */}
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsEditing(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleSave}>Guardar</Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       );
     },
-  }
+  },
 ];
 
 ================
@@ -858,8 +1445,7 @@ export default function NewActivityForm() {
 ================
 File: src/app/actividades/page.tsx
 ================
-// src/app/actividades/page.tsx
-export const dynamic = "force-dynamic";
+import Link from 'next/link';
 import { getActividades } from "@/services/actividadService";
 import { Actividad } from "@/types/actividad";
 import { DataTable } from "@/components/ui/data-table";
@@ -877,8 +1463,10 @@ export default async function HomePage() {
       <DataTable
         columns={columns}
         data={actividades}
-        addButton={<NewActivityForm />} // Pasamos el botón "Agregar" con su lógica de diálogo
+        addButton={<NewActivityForm />}
       />
+
+      
     </div>
   );
 }
@@ -1530,6 +2118,11 @@ export default function RootLayout({
                 Elementos
               </NavigationMenuLink>
             </Link>
+            <Link href="/resumen" legacyBehavior passHref>
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                Resumen
+              </NavigationMenuLink>
+            </Link>
           </NavigationMenuItem>
         </NavigationMenu>
 
@@ -1557,6 +2150,129 @@ export default async function MyServerComponent() {
   return (
     <div>
       <h1>Pagina principal</h1>
+    </div>
+  );
+}
+
+================
+File: src/app/resumen/page.tsx
+================
+// src/app/resumen/page.tsx
+"use client"; // Marcar como componente del cliente
+
+import { useState, useEffect } from "react"; // Importar useEffect
+import { Actividad } from "@/types/actividad";
+import { Elemento } from "@/types/elemento";
+import { getActividades } from "@/services/actividadService";
+import { getElementosAsignados } from "@/services/actividad-elemento";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+
+export default function ResumenPage() {
+  const [actividades, setActividades] = useState<Actividad[]>([]);
+  const [elementosPorActividad, setElementosPorActividad] = useState<{
+    [key: number]: Elemento[];
+  }>({});
+
+  // Cargar actividades y elementos asignados después de que el componente se monte
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Obtener todas las actividades
+        const actividades = await getActividades();
+        setActividades(actividades);
+
+        // Obtener elementos asignados para cada actividad
+        const elementosPorActividad: { [key: number]: Elemento[] } = {};
+        for (const actividad of actividades) {
+          const elementosAsignados = await getElementosAsignados(actividad.id);
+          elementosPorActividad[actividad.id] = elementosAsignados;
+        }
+        setElementosPorActividad(elementosPorActividad);
+      } catch (error) {
+        console.error("Error cargando datos:", error);
+      }
+    };
+
+    loadData();
+  }, []); // El array vacío [] asegura que esto solo se ejecute una vez
+
+  return (
+    <div className="container mx-auto py-10">
+      <h1 className="text-2xl font-bold mb-6">Resumen de Actividades</h1>
+
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Código</TableHead>
+            <TableHead>Nombre</TableHead>
+            <TableHead>Unidad</TableHead>
+            <TableHead>Precio Unitario</TableHead>
+            <TableHead>Acciones</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {actividades.map((actividad) => (
+            <TableRow key={actividad.id}>
+              <TableCell>{actividad.codigo}</TableCell>
+              <TableCell>{actividad.nombre}</TableCell>
+              <TableCell>{actividad.unidad}</TableCell>
+              <TableCell>{actividad.precio_unitario}</TableCell>
+              <TableCell>
+                <Button
+                  onClick={() => {
+                    // Alternar la visibilidad de los elementos asignados
+                    setElementosPorActividad((prev) => ({
+                      ...prev,
+                      [actividad.id]: prev[actividad.id] ? [] : elementosPorActividad[actividad.id],
+                    }));
+                  }}
+                >
+                  {elementosPorActividad[actividad.id]?.length ? "Ocultar" : "Mostrar"} Elementos
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+
+      {/* Mostrar elementos asignados para cada actividad */}
+      {actividades.map((actividad) => (
+        <div key={actividad.id} className="mt-4">
+          {elementosPorActividad[actividad.id]?.length > 0 && (
+            <div className="ml-8">
+              <h2 className="text-xl font-bold mb-2">Elementos de {actividad.nombre}</h2>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Código</TableHead>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Unidad</TableHead>
+                    <TableHead>Precio Unitario</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {elementosPorActividad[actividad.id].map((elemento) => (
+                    <TableRow key={elemento.id}>
+                      <TableCell>{elemento.codigo}</TableCell>
+                      <TableCell>{elemento.nombre}</TableCell>
+                      <TableCell>{elemento.unidad}</TableCell>
+                      <TableCell>{elemento.precio_unitario}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -2829,10 +3545,12 @@ export function cn(...inputs: ClassValue[]) {
 ================
 File: src/services/actividad-elemento.ts
 ================
-"use server"; 
+// src/services/actividad-elemento.ts
+import { supabase } from "@/lib/supabase";
+import { Elemento } from "@/types/elemento";
+import { ActividadElementos } from "@/types/actividadElementos";
 
-import { supabase } from "@/lib/supabase"; 
-import { Elemento, ElementoCreate } from "@/types/elemento"; 
+
 
 // Crear un nuevo elemento
 
@@ -2858,6 +3576,92 @@ import { Elemento, ElementoCreate } from "@/types/elemento";
 
     return data || [];
   }
+
+  // src/services/actividad-elemento.ts
+export async function getElementosNoAsignados(actividadId: number): Promise<Elemento[]> {
+  try {
+    // Obtener los IDs de los elementos asignados
+    const { data: asignados, error: errorAsignados } = await supabase
+      .from("actividad_elemento")
+      .select("elemento_id")
+      .eq("actividad_id", actividadId);
+
+    if (errorAsignados) throw errorAsignados;
+
+    const idsAsignados = asignados.map((item) => item.elemento_id);
+
+    // Obtener los elementos no asignados
+    const { data: elementos, error: errorElementos } = await supabase
+      .from("elementos")
+      .select("*")
+      .not("id", "in", `(${idsAsignados.join(",")})`);
+
+    if (errorElementos) throw errorElementos;
+    return elementos || [];
+  } catch (error) {
+    console.error("Error fetching elementos no asignados:", error);
+    return [];
+  }
+}
+
+  // src/services/actividad-elemento.ts
+// src/services/actividad-elemento.ts
+export async function asignarElemento(actividadId: number, elementoId: number): Promise<void> {
+  try {
+    const { data, error } = await supabase
+      .from("actividad_elemento")
+      .insert([{ actividad_id: actividadId, elemento_id: elementoId }])
+      .select(); // Agrega .select() para obtener la respuesta
+
+    if (error) {
+      console.error("Error en Supabase:", error);
+      throw error;
+    }
+
+    console.log("Elemento asignado correctamente:", data);
+  } catch (error) {
+    console.error("Error asignando elemento:", error);
+    throw error;
+  }
+}
+
+  // src/services/actividad-elemento.ts
+export async function desasignarElemento(actividadId: number, elementoId: number): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from("actividad_elemento")
+      .delete()
+      .eq("actividad_id", actividadId)
+      .eq("elemento_id", elementoId);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error("Error desasignando elemento:", error);
+    throw error;
+  }
+}
+
+
+
+export async function getElementosAsignados(actividadId: number): Promise<Elemento[]> {
+  try {
+    const { data, error } = await supabase
+      .from("actividad_elemento")
+      .select("elementos(*)")
+      .eq("actividad_id", actividadId);
+
+    if (error) throw error;
+
+    // Tipar la respuesta como un array de objetos con la propiedad "elementos"
+    const elementosAsignados = data as { elementos: Elemento }[];
+
+    // Extraer y devolver solo los elementos
+    return elementosAsignados.map((item) => item.elementos);
+  } catch (error) {
+    console.error("Error fetching elementos asignados:", error);
+    return [];
+  }
+}
 
 ================
 File: src/services/actividadService.ts
@@ -2905,7 +3709,7 @@ export async function getActividades(
   }
 }
 
-export async function getActividadById(id: string): Promise<Actividad | null> {
+export async function getActividadById(id: number): Promise<Actividad | null> {
   try {
     const { data, error } = await supabase
       .from("actividades")
