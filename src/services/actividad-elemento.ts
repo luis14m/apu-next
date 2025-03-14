@@ -41,7 +41,7 @@ import { Elemento } from "@/types/elemento";
       if (error) throw error;
   
       // Tipar la respuesta como un array de objetos con la propiedad "elementos"
-      const elementosAsignados = data as { elementos: Elemento }[];
+      const elementosAsignados = data as unknown as { elementos: Elemento }[];
   
       // Extraer y devolver solo los elementos
       return elementosAsignados.map((item) => item.elementos);

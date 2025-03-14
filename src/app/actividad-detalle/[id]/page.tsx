@@ -18,7 +18,7 @@ import {
 
 import { getActividadById, updateActividad } from "@/services/actividadService";
 import {
-  getElementosNoAsignados,
+
   getElementosAsignados,
   asignarElemento,
   desasignarElemento,
