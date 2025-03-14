@@ -64,7 +64,7 @@ export default function ActividadDetallePage() {
   const handleAsignarElemento = async (elemento: Elemento) => {
     if (!actividad?.id || !elemento?.id) return;
   
-    setLoading(true);
+    
     try {
       // Asignar el elemento a la actividad
       await asignarElemento(actividad.id, elemento.id);
