@@ -41,7 +41,7 @@ export async function getActividades(
   }
 }
 
-export async function getActividadById(id: string): Promise<Actividad | null> {
+export async function getActividadById(id: number): Promise<Actividad | null> {
   try {
     const { data, error } = await supabase
       .from("actividades")

@@ -1,15 +1,35 @@
 "use client";
 import { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, ArrowUpRight, Pencil, Trash2, CheckIcon, PlusIcon } from "lucide-react";
+import {
+  MoreHorizontal,
+  ArrowUpRight,
+  Pencil,
+  Trash2,
+  CheckIcon,
+  PlusIcon,
+} from "lucide-react";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { Actividad } from "@/types/actividad";
+import { Actividad, UNIDADES } from "@/types/actividad";
+import Link from "next/link";
 
 import { deleteActividad, updateActividad } from "@/services/actividadService";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { memo } from "react";
-import { Dialog, DialogTrigger, DialogContent } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import {
   Form,
@@ -19,9 +39,8 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
+} from "@/components/ui/form";
 import NewActivityForm from "./NewActivityForm";
-
 
 interface DialogProps {
   open: boolean;
@@ -29,29 +48,34 @@ interface DialogProps {
   actividad: Actividad;
 }
 
+const EditableCell = memo(
+  ({
+    value,
+    onSave,
+  }: {
+    value: string;
+    onSave: (newValue: string) => void;
+  }) => {
+    const [editingValue, setEditingValue] = useState(value);
 
+    const handleSave = () => {
+      onSave(editingValue);
+    };
 
-
-const EditableCell = memo(({ value, onSave }: { value: string; onSave: (newValue: string) => void }) => {
-  const [editingValue, setEditingValue] = useState(value);
-
-  const handleSave = () => {
-    onSave(editingValue);
-  };
-
-  return (
-    <div className="flex gap-2">
-      <Input
-        value={editingValue}
-        onChange={(e) => setEditingValue(e.target.value)}
-        autoFocus
-      />
-      <Button variant="ghost" size="icon" onClick={handleSave}>
-        <CheckIcon className="h-4 w-4" />
-      </Button>
-    </div>
-  );
-});
+    return (
+      <div className="flex gap-2">
+        <Input
+          value={editingValue}
+          onChange={(e) => setEditingValue(e.target.value)}
+          autoFocus
+        />
+        <Button variant="ghost" size="icon" onClick={handleSave}>
+          <CheckIcon className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  }
+);
 
 export default EditableCell;
 
@@ -94,31 +118,33 @@ export const columns: ColumnDef<Actividad>[] = [
     id: "codigo",
     accessorKey: "codigo",
     header: "Código",
+    enableGlobalFilter: true,
+    cell: ({ row }) => {
+      const actividad = row.original;
+      return (
+        <Link
+          href={`/actividad-detalle/${actividad.id}`} // Ruta dinámica
+          className="text-blue-500 hover:underline"
+        >
+          {actividad.codigo}
+        </Link>
+      );
+    },
   },
   {
     id: "nombre",
     accessorKey: "nombre",
+    enableGlobalFilter: true,
     header: "Nombre",
     cell: ({ row }) => {
-      const [isEditing, setIsEditing] = useState(false);
       const actividad = row.original;
-  
-      const handleSave = async (newValue: string) => {
-        const updatedActividad = { ...actividad, nombre: newValue };
-        try {
-          await updateActividad(updatedActividad.id, updatedActividad);
-          setIsEditing(false);
-          window.location.reload();
-        } catch (error) {
-          console.error("Error al actualizar la actividad:", error);
-          alert("Hubo un error al actualizar la actividad");
-        }
-      };
-  
-      return isEditing ? (
-        <EditableCell value={actividad.nombre} onSave={handleSave} />
-      ) : (
-        <span onClick={() => setIsEditing(true)}>{actividad.nombre}</span>
+      return (
+        <Link
+          href={`/actividad-detalle/${actividad.id}`} // Ruta dinámica
+          className="text-blue-500 hover:underline"
+        >
+          {actividad.nombre}
+        </Link>
       );
     },
   },
@@ -126,6 +152,7 @@ export const columns: ColumnDef<Actividad>[] = [
     id: "descripcion",
     accessorKey: "descripcion",
     header: "Descripción",
+    enableGlobalFilter: true,
   },
   {
     id: "unidad",
@@ -139,11 +166,25 @@ export const columns: ColumnDef<Actividad>[] = [
       const [isEditing, setIsEditing] = useState(false);
       const actividad = row.original;
   
-      const handleSave = async (updatedActividad: Actividad) => {
+      // Estados para los campos editables
+      const [codigoEditado, setCodigoEditado] = useState(actividad.codigo);
+      const [nombreEditado, setNombreEditado] = useState(actividad.nombre);
+      const [descripcionEditada, setDescripcionEditada] = useState(actividad.descripcion);
+      const [unidadEditada, setUnidadEditada] = useState(actividad.unidad);
+  
+      const handleSave = async () => {
+        const updatedActividad = {
+          ...actividad,
+          codigo: codigoEditado,
+          nombre: nombreEditado,
+          descripcion: descripcionEditada,
+          unidad: unidadEditada,
+        };
+  
         try {
           await updateActividad(updatedActividad.id, updatedActividad);
           setIsEditing(false);
-          window.location.reload();
+          window.location.reload(); // Recargar la página para reflejar los cambios
         } catch (error) {
           console.error("Error al actualizar la actividad:", error);
           alert("Hubo un error al actualizar la actividad");
@@ -152,27 +193,14 @@ export const columns: ColumnDef<Actividad>[] = [
   
       return (
         <div className="flex gap-2">
-          {/* Botón Nuevo con Modal */}
-          <NewActivityForm /> {/* Aquí llamas al componente NewActivityForm */}
-  
           {/* Botón Editar */}
-          {isEditing ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleSave(actividad)}
-            >
-              <CheckIcon className="h-4 w-4" />
-            </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsEditing(true)}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsEditing(true)}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
   
           {/* Botón Eliminar */}
           <Button
@@ -182,8 +210,77 @@ export const columns: ColumnDef<Actividad>[] = [
           >
             <Trash2 className="h-4 w-4" />
           </Button>
+  
+          {/* Diálogo de edición */}
+          <Dialog open={isEditing} onOpenChange={setIsEditing}>
+            <DialogContent>
+              <DialogTitle>Editar Actividad</DialogTitle>
+              <div className="space-y-4">
+                {/* Campo Código */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Código</label>
+                  <Input
+                    value={codigoEditado}
+                    onChange={(e) => setCodigoEditado(e.target.value)}
+                    placeholder="Código"
+                  />
+                </div>
+  
+                {/* Campo Nombre */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Nombre</label>
+                  <Input
+                    value={nombreEditado}
+                    onChange={(e) => setNombreEditado(e.target.value)}
+                    placeholder="Nombre"
+                  />
+                </div>
+  
+                {/* Campo Descripción */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Descripción</label>
+                  <Input
+                    value={descripcionEditada}
+                    onChange={(e) => setDescripcionEditada(e.target.value)}
+                    placeholder="Descripción"
+                  />
+                </div>
+  
+                {/* Campo Unidad (Select) */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Unidad</label>
+                  <Select
+                    value={unidadEditada}
+                    onValueChange={(value) => setUnidadEditada(value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona una unidad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {UNIDADES.map((unidad) => (
+                        <SelectItem key={unidad} value={unidad}>
+                          {unidad}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+  
+                {/* Botones de acción */}
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsEditing(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleSave}>Guardar</Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       );
     },
-  }
+  },
 ];

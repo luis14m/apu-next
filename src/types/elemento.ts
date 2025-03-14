@@ -1,17 +1,22 @@
 export interface Elemento {
-
-    id: number;
+    
+    id:number;
     codigo: string;
     nombre: string;
     tipo:string;
-    cantidad?:number;
     unidad: string;
     precio_unitario: number;
+    fecha: Date;    
+}
 
-    //fechaRegistro: Date;
-    //fechaUpdate: Date;
-    
-    
+export interface ElementoCreate {
+
+    codigo: string;
+    nombre: string;
+    tipo:string;
+    unidad: string;
+    precio_unitario: number;
+    fecha?: Date;    
 }
 
 export const UNIDADES = [
@@ -31,5 +36,13 @@ export const UNIDADES = [
     "rollo",
 
 
+
+] as const;
+
+export const TIPOS = [
+    
+    "Material",
+    "Mano de Obra",
+    "Maquinaria"
 
 ] as const;

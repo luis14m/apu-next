@@ -1,0 +1,241 @@
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { ActividadService} from '../../services/actividad.service';
+import { ElementoService } from '../../services/elemento.service'; // Importa el servicio de elementos
+import { Actividad } from '../../../shared/models/actividad.model';
+import { Elemento } from '../../../shared/models/elemento.model'; // Importa la interfaz Elemento
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+
+@Component({
+  selector: 'app-actividad-detalle',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './actividad-detalle.component.html',
+  styleUrls: ['./actividad-detalle.component.css'],
+ 
+ 
+})
+export class ActividadDetalleComponent implements OnInit {
+  actividad: Actividad | null = null;
+  elementos: Elemento[] = [];
+  elementosAsignados: Elemento[] = [];
+  mostrarAsignarElemento: boolean = false;
+  loading: boolean = false; // Add loading state property to your component
+  
+  searchTerm:string='';
+
+  columns = [
+    { prop: 'codigo', name: 'Codigo' },
+    { prop: 'nombre', name: 'Nombre' },
+  ];
+
+  constructor(
+    private route: ActivatedRoute,
+    private actividadService: ActividadService,
+    private elementoService: ElementoService // Inyecta el servicio de elementos
+  ) {}
+
+  async ngOnInit() {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
+      await this.loadActividad(Number(id));
+      await this.loadElementosAsignados(Number(id));
+    }
+  }
+
+  async loadActividad(id: number) {
+    try {
+      this.actividad = await this.actividadService.getActividadById(id);
+    } catch (error) {
+      console.error('Error cargando actividad:', error);
+    }
+  }
+
+  async loadElementosDisponibles() {
+    try {
+      this.elementos = await this.elementoService.getElementosNoAsignados(this.actividad?.id!);
+    } catch (error) {
+      console.error('Error cargando elementos:', error);
+    }
+  }
+
+  async loadElementosAsignados(actividadId: number) {
+    try {
+      this.elementosAsignados = await this.actividadService.getElementosAsignados(actividadId);
+    } catch (error) {
+      console.error('Error cargando elementos asignados:', error);
+    }
+  }
+
+  async toggleAsignarElemento() {
+    this.mostrarAsignarElemento = !this.mostrarAsignarElemento;
+    if (this.mostrarAsignarElemento) {
+      await this.loadElementosDisponibles();
+    }
+  }
+
+  async asignarElemento(elemento: Elemento) {
+    if (!this.actividad?.id || !elemento?.id) {
+      console.warn('Actividad ID or Elemento ID is missing');
+      return;
+    }
+  
+    try {
+      this.loading = true; // Add loading state property to your component
+      await this.actividadService.asignarElemento(this.actividad.id, elemento.id);
+
+      this.actividad.precio_unitario+=elemento.precio_unitario;
+      
+      this.elementos = this.elementos.filter(e => e.id !== elemento.id);
+      this.elementosAsignados = [...this.elementosAsignados, elemento];
+      
+      //alert('Elemento asignado correctamente');
+      
+    } catch (error: unknown) {
+      console.error('Error asignando elemento:', error);
+      //alert('Error al asignar elemento');
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  async desasignarElemento(elementoId: number) {
+    if (!this.actividad) return;
+
+    try {
+      await this.actividadService.desasignarElemento(this.actividad.id, elementoId);
+      
+      
+      // Actualizar listas
+      const elemento = this.elementosAsignados.find(e => e.id === elementoId);
+      
+      if (elemento) {
+        this.actividad.precio_unitario-=elemento.precio_unitario;
+        this.elementosAsignados = this.elementosAsignados.filter(e => e.id !== elementoId);
+        this.elementos = [...this.elementos, elemento];
+      }
+      
+      //alert('Elemento desasignado correctamente');
+    } catch (error) {
+      console.error('Error desasignando elemento:', error);
+      //alert('Error al desasignar elemento');
+    }
+  }
+
+  filteredData() {
+    return this.elementos.filter((item) =>
+      Object.values(item).some((value) =>
+        value.toString().toLowerCase().includes(this.searchTerm.toLowerCase())
+      )
+    );
+  }
+}
+  
+
+return(
+<div class="container">
+  <div class="container text-center" style="margin: 20px">
+    <h3>Detalle de la Actividad</h3>
+  </div>
+  <div *ngIf="actividad; else noData">
+    <table class="table table-hover">
+      <thead class="table-secondary">
+        <tr>
+          <th scope="col">Codigo</th>
+          <th scope="col">Nombre</th>
+          <th scope="col">Unidad</th>
+          <th scope="col">Precio Unitario</th>
+          <th scope="col">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{{ actividad.codigo }}</td>
+          <td>{{ actividad.nombre }}</td>
+          <td>{{ actividad.unidad }}</td>
+          <td>{{ actividad.precio_unitario |currency }}</td>
+          <td>
+            <!-- Botón para mostrar/ocultar la sección de "asignar elemento" -->
+            <button (click)="toggleAsignarElemento()">
+              {{ mostrarAsignarElemento ? "Ocultar" : "Asignar" }}
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <!-- Tabla de elementos asignados -->
+  <div class="seccion-asignados">
+    <h3>Elementos asignados</h3>
+    <div class="tabla-con-scroll">
+      <table *ngIf="elementosAsignados.length > 0; else sinAsignados">
+        <thead>
+          <tr>
+            <th>Codigo</th>
+            <th>Nombre</th>
+            <th>Unidad</th>
+            <th>Precio Unitario</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let elemento of elementosAsignados">
+            <td>{{elemento.codigo}}</td>
+            <td>{{ elemento.nombre }}</td>
+            <td>{{ elemento.unidad }}</td>
+            <td>{{ elemento.precio_unitario | currency }}</td>
+            <td>
+              <button (click)="desasignarElemento(elemento.id!)">Quitar</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #sinAsignados>
+        <p>No hay elementos asignados a esta actividad</p>
+      </ng-template>
+    </div>
+  </div>
+
+  <!-- Tabla de elementos disponibles -->
+  <div *ngIf="mostrarAsignarElemento" class="seccion-disponibles">
+    <h3>Listado de Elementos a Asignar</h3>
+    <div class="container text-end" style="margin: 10px">
+      <input type="text" [(ngModel)]="searchTerm" placeholder="Buscar..." />
+    </div>
+    <div class="tabla-con-scroll">
+      <table *ngIf="elementos.length > 0; else sinDisponibles">
+        <thead>
+          <tr>
+            <th>Codigo</th>
+            <th>Nombre</th>
+            <th>Unidad</th>
+            <th>Precio Unitario</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let elemento of filteredData()">
+            <td>{{elemento.codigo}}</td>
+            <td>{{ elemento.nombre }}</td>
+            <td>{{elemento.unidad}}</td>
+            <td>{{ elemento.precio_unitario | currency }}</td>
+            <td>
+              <button (click)="asignarElemento(elemento)">Asignar</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #sinDisponibles>
+        <p>No hay elementos disponibles para asignar</p>
+      </ng-template>
+    </div>
+  </div>
+</div>
+<br>
+<br>
+
+
+
+
+)

@@ -1,16 +1,22 @@
-"use server"; // Indica que este archivo contiene funciones del servidor
+"use server"; 
 
-import { supabase } from "@/lib/supabase"; // Importa el cliente de Supabase
-import { Elemento, ElementoCreate } from "@/types/elemento"; // Importa los tipos de Elemento
+import { supabase } from "@/lib/supabase"; 
+import { Elemento, ElementoCreate } from "@/types/elemento"; 
 
 // Crear un nuevo elemento
+// src/services/elementoService.ts
 export async function createElemento(
   elemento: ElementoCreate
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const elementoConFecha = {
+      ...elemento,
+      fecha: new Date(), // Agregar la fecha actual
+    };
+
     const { data, error } = await supabase
       .from("elementos")
-      .insert([elemento])
+      .insert([elementoConFecha])
       .select()
       .single();
 
@@ -32,7 +38,12 @@ export async function getElementos(): Promise<Elemento[]> {
     const { data, error } = await supabase.from("elementos").select("*");
 
     if (error) throw error;
-    return data || [];
+
+    // Convertir el campo fecha a un objeto Date
+    return data.map((elemento) => ({
+      ...elemento,
+      //fecha: new Date(elemento.fecha), // Convertir a Date
+    }));
   } catch (error) {
     console.error("Error al obtener los elementos:", error);
     throw error;

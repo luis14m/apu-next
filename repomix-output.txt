@@ -48,6 +48,7 @@ Directory Structure
 .gitignore
 components.json
 eslint.config.mjs
+Estructura.md
 next.config.ts
 package.json
 postcss.config.mjs
@@ -58,21 +59,31 @@ public/vercel.svg
 public/window.svg
 README.md
 src/app/actividades/columns.tsx
-src/app/actividades/data-table.tsx
+src/app/actividades/NewActivityForm.tsx
 src/app/actividades/page.tsx
+src/app/elementos/columns.tsx
+src/app/elementos/NewElementForm.tsx
+src/app/elementos/page.tsx
 src/app/globals.css
 src/app/layout.tsx
 src/app/page.tsx
 src/components/ui/button.tsx
 src/components/ui/checkbox.tsx
+src/components/ui/data-table-pagination.tsx
+src/components/ui/data-table-toolbar.tsx
+src/components/ui/data-table.tsx
 src/components/ui/dialog.tsx
 src/components/ui/form.tsx
 src/components/ui/input.tsx
 src/components/ui/label.tsx
+src/components/ui/navigation-menu.tsx
+src/components/ui/select.tsx
 src/components/ui/table.tsx
 src/lib/supabase.ts
 src/lib/utils.ts
+src/services/actividad-elemento.ts
 src/services/actividadService.ts
+src/services/elementoService.ts
 src/types/actividad.ts
 src/types/actividadElementos.ts
 src/types/elemento.ts
@@ -173,6 +184,198 @@ const eslintConfig = [
 export default eslintConfig;
 
 ================
+File: Estructura.md
+================
+### **Descripción Funcional de la Aplicación**
+
+La aplicación permitirá gestionar actividades relacionadas con proyectos de construcción (o cualquier dominio similar) mediante la relación de elementos y cantidades. Está diseñada para ser modular y flexible, permitiendo integrarse con cualquier frontend o backend. A continuación, se describe la estructura de las tablas, las relaciones entre ellas, y las consultas necesarias para crearlas y poblarlas con datos de ejemplo.
+
+---
+
+### **Estructura de las Tablas**
+
+1. **Tabla `Actividades`**
+   - Contiene información general sobre actividades, como su nombre y descripción.
+   - **Campos**:
+     - `id`: Identificador único (entero o UUID).
+     - `nombre`: Nombre de la actividad (texto).
+     - `descripcion`: Breve descripción de la actividad (texto).
+
+2. **Tabla `Elementos`**
+   - Contiene los detalles de los elementos utilizados en las actividades (materiales, mano de obra, maquinaria, etc.).
+   - **Campos**:
+     - `id`: Identificador único (entero o UUID).
+     - `nombre`: Nombre del elemento (texto).
+     - `tipo`: Tipo de elemento (opciones como "Material", "Mano de Obra", "Maquinaria").
+     - `costo`: Costo unitario del elemento (decimal).
+
+3. **Tabla `Tabla_Vinculo`**
+   - Representa la relación entre actividades y elementos, incluyendo la cantidad utilizada de cada elemento en una actividad específica.
+   - **Campos**:
+     - `id`: Identificador único (entero o UUID).
+     - `actividad_id`: Clave foránea que referencia una actividad en la tabla `Actividades`.
+     - `elemento_id`: Clave foránea que referencia un elemento en la tabla `Elementos`.
+     - `cantidad`: Cantidad del elemento asociado a la actividad (decimal).
+
+---
+
+### **Relaciones entre las Tablas**
+- **Uno a Muchos**:
+  - Una actividad puede estar vinculada con varios elementos a través de la tabla `Tabla_Vinculo`.
+- **Muchos a Muchos**:
+  - Los elementos pueden estar asociados con múltiples actividades, lo cual se modela con la tabla `Tabla_Vinculo`.
+
+---
+
+### **Consultas SQL**
+
+#### **Creación de Tablas**
+```sql
+CREATE TABLE Actividades (
+    id SERIAL PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    descripcion TEXT
+);
+
+CREATE TABLE Elementos (
+    id SERIAL PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    tipo TEXT NOT NULL CHECK (tipo IN ('Material', 'Mano de Obra', 'Maquinaria')),
+    costo DECIMAL(10, 2) NOT NULL
+);
+
+CREATE TABLE Tabla_Vinculo (
+    id SERIAL PRIMARY KEY,
+    actividad_id INT NOT NULL,
+    elemento_id INT NOT NULL,
+    cantidad DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (actividad_id) REFERENCES Actividades (id),
+    FOREIGN KEY (elemento_id) REFERENCES Elementos (id)
+);
+```
+
+#### **Datos de Ejemplo**
+
+**Tabla `Actividades`**:
+```sql
+INSERT INTO Actividades (nombre, descripcion)
+VALUES 
+('Construcción de cimientos', 'Actividad de construcción de los cimientos de un edificio'),
+('Instalación eléctrica', 'Colocación de cableado y conexiones eléctricas');
+```
+
+**Tabla `Elementos`**:
+```sql
+INSERT INTO Elementos (nombre, tipo, costo)
+VALUES 
+('Cemento', 'Material', 5000.00),
+('Mano de obra albañil', 'Mano de Obra', 15000.00),
+('Excavadora', 'Maquinaria', 250000.00);
+```
+
+**Tabla `Tabla_Vinculo`**:
+```sql
+INSERT INTO Tabla_Vinculo (actividad_id, elemento_id, cantidad)
+VALUES 
+(1, 1, 50),  -- 50 unidades de Cemento para la construcción de cimientos
+(1, 2, 5),   -- 5 días de Mano de obra albañil para la construcción de cimientos
+(2, 2, 3),   -- 3 días de Mano de obra albañil para la instalación eléctrica
+(2, 3, 1);   -- 1 Excavadora para la instalación eléctrica
+```
+
+---
+
+### **Ejemplo de Consultas**
+
+1. **Obtener todas las actividades y sus elementos asociados**:
+```sql
+SELECT a.nombre AS actividad, e.nombre AS elemento, e.tipo, e.costo, ae.cantidad
+FROM actividad_elementos ae
+JOIN Actividades a ON ae.actividad_id = a.id
+JOIN Elementos e ON v.elemento_id = e.id;
+```
+
+2. **Calcular el costo total por actividad**:
+```sql
+SELECT a.nombre AS actividad, SUM(e.costo * v.cantidad) AS costo_total
+FROM Tabla_Vinculo v
+JOIN Actividades a ON v.actividad_id = a.id
+JOIN Elementos e ON v.elemento_id = e.id
+GROUP BY a.nombre;
+```
+
+3. **Listar actividades que utilizan un tipo específico de elemento (por ejemplo, "Material")**:
+```sql
+SELECT DISTINCT a.nombre AS actividad
+FROM Tabla_Vinculo v
+JOIN Actividades a ON v.actividad_id = a.id
+JOIN Elementos e ON v.elemento_id = e.id
+WHERE e.tipo = 'Material';
+```
+
+---
+
+### **Flujo de la Aplicación**
+
+#### **Backend**
+1. **API para CRUD**:
+   - Endpoints para gestionar las actividades, elementos, y sus relaciones (tabla de vínculo).
+   - Ejemplo de endpoints:
+     - `GET /actividades`: Listar todas las actividades.
+     - `POST /actividades`: Crear una nueva actividad.
+     - `GET /actividades/:id/elementos`: Obtener los elementos de una actividad específica.
+   - El backend puede ser construido con frameworks como:
+     - **Node.js**: Express, NestJS.
+     - **Python**: Django, Flask, FastAPI.
+     - **PHP**: Laravel.
+
+2. **Validaciones**:
+   - Asegurar que las relaciones sean consistentes (p. ej., no se puede eliminar un elemento asociado a una actividad sin primero eliminar el vínculo).
+
+#### **Frontend**
+1. **Gestión de Actividades y Elementos**:
+   - Pantalla para listar actividades con sus descripciones y costos totales.
+   - Pantalla para gestionar elementos con su tipo y costo.
+
+2. **Relación Visual**:
+   - Vista en forma de tabla o árbol para mostrar cómo las actividades están vinculadas con los elementos.
+
+3. **Frameworks recomendados**:
+   - **React/Next.js**: Para una SPA o SSR.
+   - **Vue/Nuxt.js**: Para una experiencia similar.
+   - **Angular**: Para aplicaciones más estructuradas.
+
+---
+
+### **Escalabilidad**
+- Este diseño puede ser escalado fácilmente a microservicios si es necesario, separando el backend de la base de datos.
+- Admite integración con sistemas de autenticación para controlar acceso a las actividades y elementos.
+
+---
+
+### **Mejoras Sugeridas**
+
+1. **Gestión de Unidades**:
+   - Agregar una tabla `Unidades` para gestionar diferentes unidades de medida (kg, m², hrs, etc.)
+   - Modificar la tabla `Elementos` para incluir una referencia a la unidad de medida
+
+2. **Control de Versiones**:
+   - Agregar campos de timestamp (created_at, updated_at) en las tablas principales
+   - Implementar un sistema de versionado para actividades y sus costos históricos
+
+3. **Seguridad y Auditoría**:
+   - Agregar tabla de usuarios y roles
+   - Implementar registro de cambios (audit logs) para modificaciones importantes
+
+4. **Optimización de Consultas**:
+   - Crear índices para las columnas frecuentemente consultadas
+   - Implementar vistas materializadas para cálculos comunes de costos
+
+5. **Validaciones Adicionales**:
+   - Restricciones de cantidad mínima/máxima en Tabla_Vinculo
+   - Validaciones de costo según el tipo de elemento
+
+================
 File: next.config.ts
 ================
 import type { NextConfig } from "next";
@@ -201,7 +404,10 @@ File: package.json
     "@radix-ui/react-checkbox": "^1.1.4",
     "@radix-ui/react-dialog": "^1.1.6",
     "@radix-ui/react-label": "^2.1.2",
+    "@radix-ui/react-navigation-menu": "^1.2.5",
+    "@radix-ui/react-select": "^2.1.6",
     "@radix-ui/react-slot": "^1.1.2",
+    "@radix-ui/react-tooltip": "^1.1.8",
     "@supabase/supabase-js": "^2.49.1",
     "@tanstack/react-table": "^8.21.2",
     "class-variance-authority": "^0.7.1",
@@ -213,6 +419,7 @@ File: package.json
     "react-hook-form": "^7.54.2",
     "tailwind-merge": "^3.0.2",
     "tailwindcss-animate": "^1.0.7",
+    "xlsx": "^0.18.5",
     "zod": "^3.24.2"
   },
   "devDependencies": {
@@ -265,7 +472,9 @@ File: public/window.svg
 ================
 File: README.md
 ================
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Proyecto de Precios Unitarios de Actividades y Elementos de Construccion.
+
+Creado en Next.js y Supabase
 
 ## Getting Started
 
@@ -273,12 +482,7 @@ First, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
@@ -327,6 +531,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
+import NewActivityForm from "./NewActivityForm";
+
 
 interface DialogProps {
   open: boolean;
@@ -399,10 +605,12 @@ export const columns: ColumnDef<Actividad>[] = [
     id: "codigo",
     accessorKey: "codigo",
     header: "Código",
+    enableGlobalFilter: true,
   },
   {
     id: "nombre",
     accessorKey: "nombre",
+    enableGlobalFilter: true,
     header: "Nombre",
     cell: ({ row }) => {
       const [isEditing, setIsEditing] = useState(false);
@@ -431,6 +639,7 @@ export const columns: ColumnDef<Actividad>[] = [
     id: "descripcion",
     accessorKey: "descripcion",
     header: "Descripción",
+    enableGlobalFilter: true,
   },
   {
     id: "unidad",
@@ -457,18 +666,7 @@ export const columns: ColumnDef<Actividad>[] = [
   
       return (
         <div className="flex gap-2">
-          {/* Botón Nuevo con Modal */}
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <PlusIcon className="h-4 w-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <Form /> {/* Formulario para crear una nueva actividad */}
-            </DialogContent>
-          </Dialog>
-  
+          
           {/* Botón Editar */}
           {isEditing ? (
             <Button
@@ -499,119 +697,649 @@ export const columns: ColumnDef<Actividad>[] = [
         </div>
       );
     },
-  },
+  }
 ];
 
 ================
-File: src/app/actividades/data-table.tsx
+File: src/app/actividades/NewActivityForm.tsx
 ================
-"use client"
+// src/app/actividades/NewActivityForm.tsx
+"use client";
 
+import { useState } from "react";
+import { useForm, SubmitHandler } from "react-hook-form";
+import { Button } from "@/components/ui/button";
 import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
-
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { PlusIcon } from "lucide-react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import React from "react"
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { createActividad } from "@/services/actividadService";
+import { ActividadCreate } from "@/types/actividad";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { UNIDADES } from "@/types/actividad";
 
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[]
-  data: TData[]
+interface FormValues {
+  codigo: string;
+  nombre: string;
+  descripcion: string;
+  unidad: string;
+  precio_unitario: number;
 }
 
-export function DataTable<TData, TValue>({
-  columns,
-  data,
-}: DataTableProps<TData, TValue>) {
+export default function NewActivityForm() {
+  const [isOpen, setIsOpen] = useState(false);
+  const form = useForm<FormValues>();
 
-  const [rowSelection, setRowSelection] = React.useState({})
-
-  const table = useReactTable({
-    data,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    onRowSelectionChange: setRowSelection,
-    state: {
-      rowSelection,
-    },
-  })
+  const onSubmit: SubmitHandler<FormValues> = async (data) => {
+    try {
+      const result = await createActividad(data);
+      if (result.success) {
+        setIsOpen(false);
+        window.location.reload();
+      } else {
+        alert(result.error);
+      }
+    } catch (error) {
+      console.error("Error creating actividad:", error);
+      alert("Hubo un error al crear la actividad");
+    }
+  };
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => {
-                return (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
-                )
-              })}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows?.length ? (
-            table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                data-state={row.getIsSelected() && "selected"}
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          <PlusIcon className="w-4 h-4 mr-1" />
+          Agregar Actividad
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogTitle>Nueva Actividad</DialogTitle>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="codigo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Código</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="nombre"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nombre</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="descripcion"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descripción</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="unidad"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Unidad</FormLabel>
+                  <FormControl>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona una unidad" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {UNIDADES.map((unidad) => (
+                          <SelectItem key={unidad} value={unidad}>
+                            {unidad}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="flex justify-end">
+              <Button
+                variant="destructive"
+                onClick={() => setIsOpen(false)}
+                className="mr-2"
               >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center">
-                No results.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </div>
-  )
+                Cancelar
+              </Button>
+              <Button type="submit">Crear Actividad</Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 ================
 File: src/app/actividades/page.tsx
 ================
-export const dynamic = "force-dynamic"; // 👈 Fuerza ruta dinámica
+// src/app/actividades/page.tsx
+export const dynamic = "force-dynamic";
 import { getActividades } from "@/services/actividadService";
-import {Actividad } from "@/types/actividad";
-import { DataTable } from "@/app/actividades/data-table";
+import { Actividad } from "@/types/actividad";
+import { DataTable } from "@/components/ui/data-table";
 import { columns } from "./columns";
+import NewActivityForm from "./NewActivityForm";
 
-//Next.js ejecuta este código en el servidor automáticamente
 export default async function HomePage() {
-  const actividades: Actividad[] = await getActividades({ cache: "no-store" }); // Obtener datos en el servidor
+  const actividades: Actividad[] = await getActividades({ cache: "no-store" });
 
   return (
     <div className="container mx-auto py-10">
       <h1 className="text-2xl font-bold mb-4 text-center">Base de Actividades</h1>
-     
-      <DataTable columns={columns} data={actividades} />
+
+      {/* Tabla de actividades con el botón "Agregar" */}
+      <DataTable
+        columns={columns}
+        data={actividades}
+        addButton={<NewActivityForm />} // Pasamos el botón "Agregar" con su lógica de diálogo
+      />
+    </div>
+  );
+}
+
+================
+File: src/app/elementos/columns.tsx
+================
+"use client";
+import { ColumnDef } from "@tanstack/react-table";
+import { MoreHorizontal, ArrowUpRight, Pencil, Trash2, CheckIcon, PlusIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { Elemento } from "@/types/elemento";
+
+import { deleteElemento, updateElemento } from "@/services/elementoService";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { memo } from "react";
+import { Dialog, DialogTrigger, DialogContent } from "@/components/ui/dialog";
+import { ArrowUpDown } from "lucide-react"
+ 
+
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import NewElementForm from "./NewElementForm";
+
+
+interface DialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  elemento: Elemento;
+}
+
+interface EditableCellProps {
+  value: number;
+  onSave: (newValue: number) => void;
+}
+
+const EditableCell = memo(({ value, onSave }: EditableCellProps) => {
+  const [editingValue, setEditingValue] = useState(value.toString());
+
+  const handleSave = () => {
+    const numericValue = parseFloat(editingValue);
+    if (!isNaN(numericValue)) {
+      onSave(numericValue);
+    } else {
+      alert("Por favor, ingresa un valor numérico válido.");
+    }
+  };
+
+  return (
+    <div className="flex gap-2">
+      <Input
+        type="number"
+        value={editingValue}
+        onChange={(e) => setEditingValue(e.target.value)}
+        autoFocus
+      />
+      <Button variant="ghost" size="icon" onClick={handleSave}>
+        <CheckIcon className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+});
+
+EditableCell.displayName = "EditableCell"; // Para evitar problemas con React.memo
+
+
+const handleDelete = async (id:number) => {
+  if (!window.confirm("¿Estás seguro de eliminar este elemento?")) return;
+
+  try {
+    await deleteElemento(id);
+    window.location.reload();
+  } catch (error) {
+    console.error("Error al eliminar el elemento:", error);
+    alert("Hubo un error al eliminar el elemento");
+  }
+};
+
+export const columns: ColumnDef<Elemento>[] = [
+  {
+    id: "select",
+    header: ({ table }) => (
+      <Checkbox
+        checked={
+          table.getIsAllPageRowsSelected() ||
+          (table.getIsSomePageRowsSelected() && "indeterminate")
+        }
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Select row"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
+  {
+    id: "codigo",
+    accessorKey: "codigo",
+    header: "Código",
+  },
+  {
+    id: "nombre",
+    accessorKey: "nombre",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Nombre
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      )
+    },
+   /*  cell: ({ row }) => {
+      const [isEditing, setIsEditing] = useState(false);
+      const elemento = row.original;
+  
+      const handleSave = async (newValue: string) => {
+        const updatedElemento = { ...elemento, nombre: newValue };
+        try {
+          await updateElemento(updatedElemento.id, updatedElemento);
+          setIsEditing(false);
+          window.location.reload();
+        } catch (error) {
+          console.error("Error al actualizar el elemento:", error);
+          alert("Hubo un error al actualizar el elemento");
+        }
+      };
+  
+      return isEditing ? (
+        <EditableCell value={elemento.nombre} onSave={handleSave} />
+      ) : (
+        <span onClick={() => setIsEditing(true)}>{elemento.nombre}</span>
+      );
+    }, */
+  },
+  {
+    id: "tipo",
+    accessorKey: "tipo",
+    header:"Tipo",
+  },
+  {
+    id: "unidad",
+    accessorKey: "unidad",
+    header: "Unidad",
+  },
+  {
+    id: "precio_unitario",
+    accessorKey: "precio_unitario",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Precio Unitario
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const [isEditing, setIsEditing] = useState(false);
+      const elemento = row.original;
+  
+      const handleSave = async (newValue: number) => {
+        const updatedElemento = { 
+          ...elemento, 
+          precio_unitario: newValue,
+          fecha: new Date(), // Actualizar la fecha al momento de guardar
+        };
+  
+        try {
+          await updateElemento(updatedElemento.id, updatedElemento);
+          setIsEditing(false);
+          window.location.reload(); // Recargar la página para reflejar los cambios
+        } catch (error) {
+          console.error("Error al actualizar el elemento:", error);
+          alert("Hubo un error al actualizar el elemento");
+        }
+      };
+  
+      return isEditing ? (
+        <EditableCell value={elemento.precio_unitario} onSave={handleSave} />
+      ) : (
+        <span onClick={() => setIsEditing(true)}>{elemento.precio_unitario}</span>
+      );
+    },
+  },
+  {
+    id: "fecha",
+    accessorKey: "fecha",
+    header: "Fecha",
+   /*  cell: ({ row }) => {
+      const fecha = row.original.fecha;
+      return <span>{fecha.toDateString}</span>; // Formatear la fecha
+    }, */
+  },
+  {
+    id: "acciones",
+    header: "Acciones",
+    cell: ({ row }) => {
+      const [isEditing, setIsEditing] = useState(false);
+      const elemento = row.original;
+  
+      const handleSave = async (updatedElemento: Elemento) => {
+        try {
+          await updateElemento(updatedElemento.id, updatedElemento);
+          setIsEditing(false);
+          window.location.reload();
+        } catch (error) {
+          console.error("Error al actualizar el elemento:", error);
+          alert("Hubo un error al actualizar el elemento");
+        }
+      };
+  
+      return (
+        <div className="flex gap-2">
+         
+  
+          {/* Botón Editar */}
+          {isEditing ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleSave(elemento)}
+            >
+              <CheckIcon className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsEditing(true)}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
+  
+          {/* Botón Eliminar */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleDelete(elemento.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      );
+    },
+  }
+];
+
+================
+File: src/app/elementos/NewElementForm.tsx
+================
+"use client";
+
+import { useState } from "react";
+import { useForm, SubmitHandler } from "react-hook-form";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogTrigger, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { PlusIcon } from "lucide-react";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { createElemento } from "@/services/elementoService";
+import { ElementoCreate } from "@/types/elemento";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+
+import { UNIDADES, TIPOS } from "@/types/elemento";
+
+interface FormValues {
+  codigo: string;
+  nombre: string;
+  tipo: string;
+  unidad: string;
+  precio_unitario: number;
+  fecha: Date;
+}
+
+export default function NewElementForm() {
+  const [isOpen, setIsOpen] = useState(false);
+  const form = useForm<FormValues>();
+
+  const onSubmit: SubmitHandler<FormValues> = async (data) => {
+    try {
+      const result = await createElemento(data);
+      if (result.success) {
+        setIsOpen(false);
+        window.location.reload();
+      } else {
+        alert(result.error);
+      }
+    } catch (error) {
+      console.error("Error creating elemento:", error);
+      alert("Hubo un error al crear el elemento");
+    }
+  };
+
+  return (
+    <div className="flex justify-end mb-4">
+       <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          <PlusIcon className="w-4 h-4 mr-1" />
+          Agregar Elemento
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogTitle>Nuevo Elemento </DialogTitle>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="codigo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Código</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="nombre"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nombre</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="tipo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo</FormLabel>
+                    <FormControl>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona un tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TIPOS.map((tipo) => (
+                            <SelectItem key={tipo} value={tipo}>
+                              {tipo}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="unidad"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Unidad</FormLabel>
+                    <FormControl>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona una unidad" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {UNIDADES.map((unidad) => (
+                            <SelectItem key={unidad} value={unidad}>
+                              {unidad}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="precio_unitario"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Precio Unitario</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex justify-end mb-4">
+                <Button type="submit">Crear Elemento</Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+================
+File: src/app/elementos/page.tsx
+================
+export const dynamic = "force-dynamic"; // 👈 Fuerza ruta dinámica
+import { getElementos } from "@/services/elementoService";
+import { Elemento } from "@/types/elemento";
+import { DataTable } from "@/components/ui/data-table";
+import { columns } from "./columns";
+import NewElementForm from "./NewElementForm";
+
+export default async function HomePage() {
+  const elementos: Elemento[] = await getElementos({ cache: "no-store" });
+
+  return (
+    <div className="container mx-auto py-10">
+      <h1 className="text-2xl font-bold mb-4 text-center">Base de Elementos</h1>
+
+    
+      {/* Tabla de elementos */}
+      <DataTable columns={columns} 
+      data={elementos}
+      addButton={<NewElementForm />}  />
     </div>
   );
 }
@@ -752,6 +1480,13 @@ File: src/app/layout.tsx
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import {
+  NavigationMenu,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
+import Link from "next/link";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -775,10 +1510,32 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+      <body>
+
+       <div className="flex justify-end p-4">
+       <NavigationMenu>
+          <NavigationMenuItem>
+          <Link href="/" legacyBehavior passHref>
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                Inicio
+              </NavigationMenuLink>
+            </Link>
+            <Link href="/actividades" legacyBehavior passHref>
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                Actividades
+              </NavigationMenuLink>
+            </Link>
+            <Link href="/elementos" legacyBehavior passHref>
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                Elementos
+              </NavigationMenuLink>
+            </Link>
+          </NavigationMenuItem>
+        </NavigationMenu>
+
+       </div>
+
+        <main className="p-4">{children}</main>
       </body>
     </html>
   );
@@ -787,104 +1544,19 @@ export default function RootLayout({
 ================
 File: src/app/page.tsx
 ================
-import Image from "next/image";
+import { redirect } from "next/navigation"; // Importa redirect desde next/navigation
 
-export default function Home() {
+export default async function MyServerComponent() {
+  // Lógica del servidor
+  const shouldRedirect = true; // Condición para redireccionar
+
+  if (shouldRedirect) {
+    redirect("/actividades"); // Redirecciona a /actividades
+  }
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+    <div>
+      <h1>Pagina principal</h1>
     </div>
   );
 }
@@ -986,6 +1658,313 @@ function Checkbox({
 }
 
 export { Checkbox }
+
+================
+File: src/components/ui/data-table-pagination.tsx
+================
+import { Table } from "@tanstack/react-table"
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react"
+
+import { Input } from "@/components/ui/input";
+
+import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
+interface DataTablePaginationProps<TData> {
+  table: Table<TData>
+}
+
+export function DataTablePagination<TData>({
+  table,
+}: DataTablePaginationProps<TData>) {
+  return (
+    <div className="flex items-center justify-between px-2">
+      <div className="flex-1 text-sm text-muted-foreground">
+        {table.getFilteredSelectedRowModel().rows.length} of{" "}
+        {table.getFilteredRowModel().rows.length} row(s) selected.
+      </div>
+      <div className="flex items-center space-x-6 lg:space-x-8">
+        <div className="flex items-center space-x-2">
+          <p className="text-sm font-medium">Rows per page</p>
+          <Select
+            value={`${table.getState().pagination.pageSize}`}
+            onValueChange={(value) => {
+              table.setPageSize(Number(value))
+            }}
+          >
+            <SelectTrigger className="h-8 w-[70px]">
+              <SelectValue placeholder={table.getState().pagination.pageSize} />
+            </SelectTrigger>
+            <SelectContent side="top">
+              {[10, 20, 30, 40, 50].map((pageSize) => (
+                <SelectItem key={pageSize} value={`${pageSize}`}>
+                  {pageSize}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+          Page {table.getState().pagination.pageIndex + 1} of{" "}
+          {table.getPageCount()}
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            className="hidden h-8 w-8 p-0 lg:flex"
+            onClick={() => table.setPageIndex(0)}
+            disabled={!table.getCanPreviousPage()}
+          >
+            <span className="sr-only">Go to first page</span>
+            <ChevronsLeft />
+          </Button>
+          <Button
+            variant="outline"
+            className="h-8 w-8 p-0"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            <span className="sr-only">Go to previous page</span>
+            <ChevronLeft />
+          </Button>
+          <Button
+            variant="outline"
+            className="h-8 w-8 p-0"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            <span className="sr-only">Go to next page</span>
+            <ChevronRight />
+          </Button>
+          <Button
+            variant="outline"
+            className="hidden h-8 w-8 p-0 lg:flex"
+            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+            disabled={!table.getCanNextPage()}
+          >
+            <span className="sr-only">Go to last page</span>
+            <ChevronsRight />
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+================
+File: src/components/ui/data-table-toolbar.tsx
+================
+"use client";
+
+import { Table } from "@tanstack/react-table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Download, PlusCircle } from "lucide-react";
+import * as XLSX from "xlsx";
+import { useState } from "react";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import React from "react";
+import NewActivityForm from "@/app/actividades/NewActivityForm";
+
+interface DataTableToolbarProps<TData> {
+  table: Table<TData>;
+  onAddClick?: () => void; // Prop opcional para manejar el clic en "Agregar"
+}
+
+export function DataTableToolbar<TData>({
+  table,
+  
+}: DataTableToolbarProps<TData>) {
+
+
+  
+
+  const exportToExcel = () => {
+    const exportData = table.getRowModel().rows.map((row) => {
+      const rowData: any = {};
+      row.getVisibleCells().forEach((cell) => {
+        const column = cell.column.columnDef;
+        rowData[column.header as string] = cell.getValue();
+      });
+      return rowData;
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "listado");
+    XLSX.writeFile(workbook, "tabla.xlsx");
+  };
+
+  return (
+    <div className="flex items-center justify-between py-4">
+
+         {/* Botones a la derecha */}
+         <div className="flex space-x-2">
+        <Button variant="outline" size="sm" onClick={exportToExcel}>
+          <Download className="w-4 h-4 mr-1" />
+          Exportar Excel
+        </Button>
+    
+      </div>
+    </div>
+  );
+}
+
+================
+File: src/components/ui/data-table.tsx
+================
+// src/components/ui/data-table.tsx
+"use client";
+
+import * as React from "react";
+import {
+  ColumnDef,
+  SortingState,
+  flexRender,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  getFilteredRowModel,
+} from "@tanstack/react-table";
+
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Input } from "./input";
+import { useState, useEffect } from "react";
+
+interface DataTableProps<TData, TValue> {
+  columns: ColumnDef<TData, TValue>[];
+  data: TData[];
+  addButton?: React.ReactNode; // Prop para el botón "Agregar" con su lógica de diálogo
+}
+
+export function DataTable<TData, TValue>({
+  columns,
+  data,
+  addButton,
+}: DataTableProps<TData, TValue>) {
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [rowSelection, setRowSelection] = React.useState({});
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const table = useReactTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    onRowSelectionChange: setRowSelection,
+    onSortingChange: setSorting,
+    getSortedRowModel: getSortedRowModel(),
+    state: {
+      sorting,
+      rowSelection,
+      globalFilter, // Conecta el globalFilter con el estado de la tabla
+    },
+    onGlobalFilterChange: setGlobalFilter, // Actualiza el globalFilter cuando cambia
+    getFilteredRowModel: getFilteredRowModel(), // Habilita el filtrado global
+  });
+
+  // Conecta el searchTerm con el globalFilter
+  useEffect(() => {
+    setGlobalFilter(searchTerm);
+  }, [searchTerm]);
+
+  return (
+    <div className="flex flex-col space-y-4">
+      {/* Contenedor para el input y el botón */}
+      <div className="flex items-center justify-between">
+        {/* Input de búsqueda a la izquierda */}
+        <div className="flex-1">
+          <Input
+            placeholder="Buscar..."
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)} // Actualiza el searchTerm
+            className="max-w-sm"
+          />
+        </div>
+
+        {/* Botón "Agregar" a la derecha */}
+        <div className="flex justify-end">
+          {addButton} {/* Renderiza el botón "Agregar" pasado como prop */}
+        </div>
+      </div>
+
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  return (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && "selected"}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
+                  No results.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
 
 ================
 File: src/components/ui/dialog.tsx
@@ -1351,6 +2330,363 @@ function Label({
 export { Label }
 
 ================
+File: src/components/ui/navigation-menu.tsx
+================
+import * as React from "react"
+import * as NavigationMenuPrimitive from "@radix-ui/react-navigation-menu"
+import { cva } from "class-variance-authority"
+import { ChevronDownIcon } from "lucide-react"
+
+import { cn } from "@/lib/utils"
+
+function NavigationMenu({
+  className,
+  children,
+  viewport = true,
+  ...props
+}: React.ComponentProps<typeof NavigationMenuPrimitive.Root> & {
+  viewport?: boolean
+}) {
+  return (
+    <NavigationMenuPrimitive.Root
+      data-slot="navigation-menu"
+      data-viewport={viewport}
+      className={cn(
+        "group/navigation-menu relative flex max-w-max flex-1 items-center justify-center",
+        className
+      )}
+      {...props}
+    >
+      {children}
+      {viewport && <NavigationMenuViewport />}
+    </NavigationMenuPrimitive.Root>
+  )
+}
+
+function NavigationMenuList({
+  className,
+  ...props
+}: React.ComponentProps<typeof NavigationMenuPrimitive.List>) {
+  return (
+    <NavigationMenuPrimitive.List
+      data-slot="navigation-menu-list"
+      className={cn(
+        "group flex flex-1 list-none items-center justify-center gap-1",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function NavigationMenuItem({
+  className,
+  ...props
+}: React.ComponentProps<typeof NavigationMenuPrimitive.Item>) {
+  return (
+    <NavigationMenuPrimitive.Item
+      data-slot="navigation-menu-item"
+      className={cn("relative", className)}
+      {...props}
+    />
+  )
+}
+
+const navigationMenuTriggerStyle = cva(
+  "group inline-flex h-9 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground disabled:pointer-events-none disabled:opacity-50 data-[state=open]:hover:bg-accent data-[state=open]:text-accent-foreground data-[state=open]:focus:bg-accent data-[state=open]:bg-accent/50 ring-ring/10 dark:ring-ring/20 dark:outline-ring/40 outline-ring/50 transition-[color,box-shadow] focus-visible:ring-4 focus-visible:outline-1"
+)
+
+function NavigationMenuTrigger({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<typeof NavigationMenuPrimitive.Trigger>) {
+  return (
+    <NavigationMenuPrimitive.Trigger
+      data-slot="navigation-menu-trigger"
+      className={cn(navigationMenuTriggerStyle(), "group", className)}
+      {...props}
+    >
+      {children}{" "}
+      <ChevronDownIcon
+        className="relative top-[1px] ml-1 size-3 transition duration-300 group-data-[state=open]:rotate-180"
+        aria-hidden="true"
+      />
+    </NavigationMenuPrimitive.Trigger>
+  )
+}
+
+function NavigationMenuContent({
+  className,
+  ...props
+}: React.ComponentProps<typeof NavigationMenuPrimitive.Content>) {
+  return (
+    <NavigationMenuPrimitive.Content
+      data-slot="navigation-menu-content"
+      className={cn(
+        "data-[motion^=from-]:animate-in data-[motion^=to-]:animate-out data-[motion^=from-]:fade-in data-[motion^=to-]:fade-out data-[motion=from-end]:slide-in-from-right-52 data-[motion=from-start]:slide-in-from-left-52 data-[motion=to-end]:slide-out-to-right-52 data-[motion=to-start]:slide-out-to-left-52 top-0 left-0 w-full p-2 pr-2.5 md:absolute md:w-auto",
+        "group-data-[viewport=false]/navigation-menu:bg-popover group-data-[viewport=false]/navigation-menu:text-popover-foreground group-data-[viewport=false]/navigation-menu:data-[state=open]:animate-in group-data-[viewport=false]/navigation-menu:data-[state=closed]:animate-out group-data-[viewport=false]/navigation-menu:data-[state=closed]:zoom-out-95 group-data-[viewport=false]/navigation-menu:data-[state=open]:zoom-in-95 group-data-[viewport=false]/navigation-menu:data-[state=open]:fade-in-0 group-data-[viewport=false]/navigation-menu:data-[state=closed]:fade-out-0 group-data-[viewport=false]/navigation-menu:top-full group-data-[viewport=false]/navigation-menu:mt-1.5 group-data-[viewport=false]/navigation-menu:overflow-hidden group-data-[viewport=false]/navigation-menu:rounded-md group-data-[viewport=false]/navigation-menu:border group-data-[viewport=false]/navigation-menu:shadow group-data-[viewport=false]/navigation-menu:duration-200 **:data-[slot=navigation-menu-link]:focus:ring-0 **:data-[slot=navigation-menu-link]:focus:outline-none",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function NavigationMenuViewport({
+  className,
+  ...props
+}: React.ComponentProps<typeof NavigationMenuPrimitive.Viewport>) {
+  return (
+    <div
+      className={cn(
+        "absolute top-full left-0 isolate z-50 flex justify-center"
+      )}
+    >
+      <NavigationMenuPrimitive.Viewport
+        data-slot="navigation-menu-viewport"
+        className={cn(
+          "origin-top-center bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-90 relative mt-1.5 h-[var(--radix-navigation-menu-viewport-height)] w-full overflow-hidden rounded-md border shadow md:w-[var(--radix-navigation-menu-viewport-width)]",
+          className
+        )}
+        {...props}
+      />
+    </div>
+  )
+}
+
+function NavigationMenuLink({
+  className,
+  ...props
+}: React.ComponentProps<typeof NavigationMenuPrimitive.Link>) {
+  return (
+    <NavigationMenuPrimitive.Link
+      data-slot="navigation-menu-link"
+      className={cn(
+        "data-[active=true]:focus:bg-accent data-[active=true]:hover:bg-accent data-[active=true]:bg-accent/50 data-[active=true]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground ring-ring/10 dark:ring-ring/20 dark:outline-ring/40 outline-ring/50 [&_svg:not([class*='text-'])]:text-muted-foreground flex flex-col gap-1 rounded-sm p-2 text-sm transition-[color,box-shadow] focus-visible:ring-4 focus-visible:outline-1 [&_svg:not([class*='size-'])]:size-4",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function NavigationMenuIndicator({
+  className,
+  ...props
+}: React.ComponentProps<typeof NavigationMenuPrimitive.Indicator>) {
+  return (
+    <NavigationMenuPrimitive.Indicator
+      data-slot="navigation-menu-indicator"
+      className={cn(
+        "data-[state=visible]:animate-in data-[state=hidden]:animate-out data-[state=hidden]:fade-out data-[state=visible]:fade-in top-full z-[1] flex h-1.5 items-end justify-center overflow-hidden",
+        className
+      )}
+      {...props}
+    >
+      <div className="bg-border relative top-[60%] h-2 w-2 rotate-45 rounded-tl-sm shadow-md" />
+    </NavigationMenuPrimitive.Indicator>
+  )
+}
+
+export {
+  NavigationMenu,
+  NavigationMenuList,
+  NavigationMenuItem,
+  NavigationMenuContent,
+  NavigationMenuTrigger,
+  NavigationMenuLink,
+  NavigationMenuIndicator,
+  NavigationMenuViewport,
+  navigationMenuTriggerStyle,
+}
+
+================
+File: src/components/ui/select.tsx
+================
+"use client"
+
+import * as React from "react"
+import * as SelectPrimitive from "@radix-ui/react-select"
+import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react"
+
+import { cn } from "@/lib/utils"
+
+function Select({
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.Root>) {
+  return <SelectPrimitive.Root data-slot="select" {...props} />
+}
+
+function SelectGroup({
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.Group>) {
+  return <SelectPrimitive.Group data-slot="select-group" {...props} />
+}
+
+function SelectValue({
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.Value>) {
+  return <SelectPrimitive.Value data-slot="select-value" {...props} />
+}
+
+function SelectTrigger({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.Trigger>) {
+  return (
+    <SelectPrimitive.Trigger
+      data-slot="select-trigger"
+      className={cn(
+        "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive flex h-9 w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        className
+      )}
+      {...props}
+    >
+      {children}
+      <SelectPrimitive.Icon asChild>
+        <ChevronDownIcon className="size-4 opacity-50" />
+      </SelectPrimitive.Icon>
+    </SelectPrimitive.Trigger>
+  )
+}
+
+function SelectContent({
+  className,
+  children,
+  position = "popper",
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.Content>) {
+  return (
+    <SelectPrimitive.Portal>
+      <SelectPrimitive.Content
+        data-slot="select-content"
+        className={cn(
+          "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-50 max-h-(--radix-select-content-available-height) min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border shadow-md",
+          position === "popper" &&
+            "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
+          className
+        )}
+        position={position}
+        {...props}
+      >
+        <SelectScrollUpButton />
+        <SelectPrimitive.Viewport
+          className={cn(
+            "p-1",
+            position === "popper" &&
+              "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1"
+          )}
+        >
+          {children}
+        </SelectPrimitive.Viewport>
+        <SelectScrollDownButton />
+      </SelectPrimitive.Content>
+    </SelectPrimitive.Portal>
+  )
+}
+
+function SelectLabel({
+  className,
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.Label>) {
+  return (
+    <SelectPrimitive.Label
+      data-slot="select-label"
+      className={cn("px-2 py-1.5 text-sm font-medium", className)}
+      {...props}
+    />
+  )
+}
+
+function SelectItem({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.Item>) {
+  return (
+    <SelectPrimitive.Item
+      data-slot="select-item"
+      className={cn(
+        "focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        className
+      )}
+      {...props}
+    >
+      <span className="absolute right-2 flex size-3.5 items-center justify-center">
+        <SelectPrimitive.ItemIndicator>
+          <CheckIcon className="size-4" />
+        </SelectPrimitive.ItemIndicator>
+      </span>
+      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+    </SelectPrimitive.Item>
+  )
+}
+
+function SelectSeparator({
+  className,
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.Separator>) {
+  return (
+    <SelectPrimitive.Separator
+      data-slot="select-separator"
+      className={cn("bg-border pointer-events-none -mx-1 my-1 h-px", className)}
+      {...props}
+    />
+  )
+}
+
+function SelectScrollUpButton({
+  className,
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.ScrollUpButton>) {
+  return (
+    <SelectPrimitive.ScrollUpButton
+      data-slot="select-scroll-up-button"
+      className={cn(
+        "flex cursor-default items-center justify-center py-1",
+        className
+      )}
+      {...props}
+    >
+      <ChevronUpIcon className="size-4" />
+    </SelectPrimitive.ScrollUpButton>
+  )
+}
+
+function SelectScrollDownButton({
+  className,
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.ScrollDownButton>) {
+  return (
+    <SelectPrimitive.ScrollDownButton
+      data-slot="select-scroll-down-button"
+      className={cn(
+        "flex cursor-default items-center justify-center py-1",
+        className
+      )}
+      {...props}
+    >
+      <ChevronDownIcon className="size-4" />
+    </SelectPrimitive.ScrollDownButton>
+  )
+}
+
+export {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectScrollDownButton,
+  SelectScrollUpButton,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+}
+
+================
 File: src/components/ui/table.tsx
 ================
 "use client"
@@ -1491,6 +2827,39 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 ================
+File: src/services/actividad-elemento.ts
+================
+"use server"; 
+
+import { supabase } from "@/lib/supabase"; 
+import { Elemento, ElementoCreate } from "@/types/elemento"; 
+
+// Crear un nuevo elemento
+
+  // Método para obtener todos los registros de la tabla actividad_elemento
+  export async function getActividadesConElementos(): Promise<any[]> {
+    
+    const { data, error } = await supabase
+      .from('actividad_elemento')
+      .select(`
+        actividad_id,
+        actividades:actividad_id (nombre),
+        elemento_id,
+        elementos:elemento_id (nombre),
+        cantidad,
+        
+      `);
+
+
+    if (error) {
+      console.error('Error fetching actividad_elemento:', error);
+      throw error;
+    }
+
+    return data || [];
+  }
+
+================
 File: src/services/actividadService.ts
 ================
 "use server";
@@ -1583,6 +2952,143 @@ export async function deleteActividad(id: string): Promise<void> {
 export {};
 
 ================
+File: src/services/elementoService.ts
+================
+"use server"; 
+
+import { supabase } from "@/lib/supabase"; 
+import { Elemento, ElementoCreate } from "@/types/elemento"; 
+
+// Crear un nuevo elemento
+// src/services/elementoService.ts
+export async function createElemento(
+  elemento: ElementoCreate
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const elementoConFecha = {
+      ...elemento,
+      fecha: new Date(), // Agregar la fecha actual
+    };
+
+    const { data, error } = await supabase
+      .from("elementos")
+      .insert([elementoConFecha])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error al crear el elemento:", error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error inesperado al crear el elemento:", error);
+    return { success: false, error: "Error inesperado" };
+  }
+}
+
+// Obtener todos los elementos
+export async function getElementos(): Promise<Elemento[]> {
+  try {
+    const { data, error } = await supabase.from("elementos").select("*");
+
+    if (error) throw error;
+
+    // Convertir el campo fecha a un objeto Date
+    return data.map((elemento) => ({
+      ...elemento,
+      //fecha: new Date(elemento.fecha), // Convertir a Date
+    }));
+  } catch (error) {
+    console.error("Error al obtener los elementos:", error);
+    throw error;
+  }
+}
+
+// Obtener elementos no asignados a una actividad
+export async function getElementosNoAsignados(
+  actividadId: number
+): Promise<Elemento[]> {
+  try {
+    const idsAsignados = await getIdsAsignados(actividadId);
+    const { data, error } = await supabase
+      .from("elementos")
+      .select("*")
+      .not("id", "in", `(${idsAsignados})`);
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error("Error al obtener elementos no asignados:", error);
+    throw error;
+  }
+}
+
+// Obtener IDs de elementos asignados a una actividad
+async function getIdsAsignados(actividadId: number): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from("actividad_elemento")
+      .select("elemento_id")
+      .eq("actividad_id", actividadId);
+
+    if (error) throw error;
+    return data.map((item) => item.elemento_id).join(",");
+  } catch (error) {
+    console.error("Error al obtener IDs asignados:", error);
+    throw error;
+  }
+}
+
+// Actualizar un elemento
+export async function updateElemento(
+  id: number,
+  elemento: Partial<Elemento>
+): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from("elementos")
+      .update(elemento)
+      .eq("id", id);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error("Error al actualizar el elemento:", error);
+    throw error;
+  }
+}
+
+// Obtener un elemento por ID
+export async function getElementoById(id: number): Promise<Elemento | null> {
+  try {
+    const { data, error } = await supabase
+      .from("elementos")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error("Error al obtener el elemento:", error);
+    throw error;
+  }
+}
+
+// Eliminar un elemento
+export async function deleteElemento(id: number): Promise<void> {
+  try {
+    const { error } = await supabase.from("elementos").delete().eq("id", id);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error("Error al eliminar el elemento:", error);
+    throw error;
+  }
+}
+
+================
 File: src/types/actividad.ts
 ================
 export interface Actividad {
@@ -1608,7 +3114,15 @@ export interface ActividadCreate {
     descripcion: string;
     unidad: string;
     precio_unitario: number;
-}
+} 
+
+export const UNIDADES = [
+
+    "ML",
+    "M²",	
+    "M³",
+    
+] as const;
 
 ================
 File: src/types/actividadElementos.ts
@@ -1619,28 +3133,33 @@ export interface ActividadElementos {
     actividad_id: number;
     elemento_id: number;
     cantidad: number;
-    precioUnitario: number;
-    Preciototal: number;
-    created_at: Date;
+   
+    
+   
 }
 
 ================
 File: src/types/elemento.ts
 ================
 export interface Elemento {
-
-    id: number;
+    
+    id:number;
     codigo: string;
     nombre: string;
     tipo:string;
-    cantidad?:number;
     unidad: string;
     precio_unitario: number;
+    fecha: Date;    
+}
 
-    //fechaRegistro: Date;
-    //fechaUpdate: Date;
-    
-    
+export interface ElementoCreate {
+
+    codigo: string;
+    nombre: string;
+    tipo:string;
+    unidad: string;
+    precio_unitario: number;
+    fecha?: Date;    
 }
 
 export const UNIDADES = [
@@ -1660,6 +3179,14 @@ export const UNIDADES = [
     "rollo",
 
 
+
+] as const;
+
+export const TIPOS = [
+    
+    "Material",
+    "Mano de Obra",
+    "Maquinaria"
 
 ] as const;
 
