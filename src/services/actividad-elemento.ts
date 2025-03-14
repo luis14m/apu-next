@@ -31,31 +31,25 @@ import { Elemento } from "@/types/elemento";
   }
 
   // src/services/actividad-elemento.ts
-export async function getElementosNoAsignados(actividadId: number): Promise<Elemento[]> {
-  try {
-    // Obtener los IDs de los elementos asignados
-    const { data: asignados, error: errorAsignados } = await supabase
-      .from("actividad_elemento")
-      .select("elemento_id")
-      .eq("actividad_id", actividadId);
-
-    if (errorAsignados) throw errorAsignados;
-
-    const idsAsignados = asignados.map((item) => item.elemento_id);
-
-    // Obtener los elementos no asignados
-    const { data: elementos, error: errorElementos } = await supabase
-      .from("elementos")
-      .select("*")
-      .not("id", "in", `(${idsAsignados.join(",")})`);
-
-    if (errorElementos) throw errorElementos;
-    return elementos || [];
-  } catch (error) {
-    console.error("Error fetching elementos no asignados:", error);
-    return [];
+  export async function getElementosAsignados(actividadId: number): Promise<Elemento[]> {
+    try {
+      const { data, error } = await supabase
+        .from("actividad_elemento")
+        .select("elementos(*)")
+        .eq("actividad_id", actividadId);
+  
+      if (error) throw error;
+  
+      // Tipar la respuesta como un array de objetos con la propiedad "elementos"
+      const elementosAsignados = data as { elementos: Elemento }[];
+  
+      // Extraer y devolver solo los elementos
+      return elementosAsignados.map((item) => item.elementos);
+    } catch (error) {
+      console.error("Error fetching elementos asignados:", error);
+      return [];
+    }
   }
-}
 
   // src/services/actividad-elemento.ts
 // src/services/actividad-elemento.ts
@@ -95,23 +89,3 @@ export async function desasignarElemento(actividadId: number, elementoId: number
 }
 
 
-
-export async function getElementosAsignados(actividadId: number): Promise<Elemento[]> {
-  try {
-    const { data, error } = await supabase
-      .from("actividad_elemento")
-      .select("elementos(*)")
-      .eq("actividad_id", actividadId);
-
-    if (error) throw error;
-
-    // Tipar la respuesta como un array de objetos con la propiedad "elementos"
-    const elementosAsignados = data as { elementos: Elemento }[];
-
-    // Extraer y devolver solo los elementos
-    return elementosAsignados.map((item) => item.elementos);
-  } catch (error) {
-    console.error("Error fetching elementos asignados:", error);
-    return [];
-  }
-}
