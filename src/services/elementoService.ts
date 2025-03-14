@@ -33,7 +33,7 @@ export async function createElemento(
 }
 
 // Obtener todos los elementos
-export async function getElementos(): Promise<Elemento[]> {
+export async function getElementos(p0: { cache: string; }): Promise<Elemento[]> {
   try {
     const { data, error } = await supabase.from("elementos").select("*");
 
