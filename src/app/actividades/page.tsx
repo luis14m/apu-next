@@ -1,4 +1,4 @@
-import Link from 'next/link';
+
 import { getActividades } from "@/services/actividadService";
 import { Actividad } from "@/types/actividad";
 import { DataTable } from "@/components/ui/data-table";

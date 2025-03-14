@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { createElemento } from "@/services/elementoService";
-import { ElementoCreate } from "@/types/elemento";
+
 import {
   Select,
   SelectTrigger,

@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { Actividad } from "@/types/actividad";
 import { Elemento } from "@/types/elemento";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import {
   Table,
   TableBody,
@@ -31,7 +31,7 @@ export default function ActividadDetallePage() {
   const [elementosDisponibles, setElementosDisponibles] = useState<Elemento[]>([]);
   const [mostrarAsignarElemento, setMostrarAsignarElemento] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(false);
+
 
   // Cargar la actividad y los elementos asignados al montar el componente
   useEffect(() => {

@@ -1,12 +1,11 @@
 "use client";
 import { ColumnDef } from "@tanstack/react-table";
 import {
-  MoreHorizontal,
-  ArrowUpRight,
+  
   Pencil,
   Trash2,
   CheckIcon,
-  PlusIcon,
+
 } from "lucide-react";
 import {
   Select,
@@ -26,21 +25,12 @@ import { Input } from "@/components/ui/input";
 import { memo } from "react";
 import {
   Dialog,
-  DialogTrigger,
+
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
 
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import NewActivityForm from "./NewActivityForm";
+
 
 interface DialogProps {
   open: boolean;

@@ -9,20 +9,10 @@ import { deleteElemento, updateElemento } from "@/services/elementoService";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { memo } from "react";
-import { Dialog, DialogTrigger, DialogContent } from "@/components/ui/dialog";
+
 import { ArrowUpDown } from "lucide-react"
  
 
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import NewElementForm from "./NewElementForm";
 
 
 interface DialogProps {

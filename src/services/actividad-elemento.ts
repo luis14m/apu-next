@@ -1,7 +1,7 @@
 // src/services/actividad-elemento.ts
 import { supabase } from "@/lib/supabase";
 import { Elemento } from "@/types/elemento";
-import { ActividadElementos } from "@/types/actividadElementos";
+
 
 
 

@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { createActividad } from "@/services/actividadService";
-import { ActividadCreate } from "@/types/actividad";
+
 import {
   Select,
   SelectTrigger,

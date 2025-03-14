@@ -5,15 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Download, PlusCircle } from "lucide-react";
 import * as XLSX from "xlsx";
-import { useState } from "react";
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+
 import React from "react";
-import NewActivityForm from "@/app/actividades/NewActivityForm";
+
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
