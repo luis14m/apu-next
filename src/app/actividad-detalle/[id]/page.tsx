@@ -85,7 +85,7 @@ export default function ActividadDetallePage() {
     } catch (error) {
       console.error("Error asignando elemento:", error);
     } finally {
-      setLoading(false);
+      
     }
   };
 
