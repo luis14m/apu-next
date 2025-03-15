@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic"; // 👈 Fuerza ruta dinámica
 
 import { getActividades } from "@/services/actividadService";
 import { Actividad } from "@/types/actividad";
