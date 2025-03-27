@@ -25,7 +25,7 @@ export async function createActividad(
   }
 }
 
-export async function getActividades(): Promise<Actividad[]> {
+export async function getActividades(p0: { cache: string; }): Promise<Actividad[]> {
   try {
     const { data, error } = await supabase
       .from("actividades")
