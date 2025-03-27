@@ -135,8 +135,12 @@ export default function NewActivityForm() {
             />
             <div className="flex justify-end">
               <Button
+                type="button"
                 variant="destructive"
-                onClick={() => setIsOpen(false)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsOpen(false);
+                }}
                 className="mr-2"
               >
                 Cancelar

@@ -38,6 +38,7 @@ Notes:
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
 
 Additional Info:
 ----------------
@@ -48,7 +49,6 @@ Directory Structure
 .gitignore
 actividad-detalle.txt
 components.json
-eslint.config.mjs
 Estructura.md
 next.config.ts
 package.json
@@ -140,6 +140,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.vercel
 
 ================
 File: actividad-detalle.txt
@@ -412,26 +414,6 @@ File: components.json
 }
 
 ================
-File: eslint.config.mjs
-================
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
-
-const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
-];
-
-export default eslintConfig;
-
-================
 File: Estructura.md
 ================
 ### **Descripción Funcional de la Aplicación**
@@ -635,55 +617,6 @@ const nextConfig: NextConfig = {
 export default nextConfig;
 
 ================
-File: package.json
-================
-{
-  "name": "apu-next",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
-  "dependencies": {
-    "@hookform/resolvers": "^4.1.3",
-    "@radix-ui/react-checkbox": "^1.1.4",
-    "@radix-ui/react-dialog": "^1.1.6",
-    "@radix-ui/react-label": "^2.1.2",
-    "@radix-ui/react-navigation-menu": "^1.2.5",
-    "@radix-ui/react-select": "^2.1.6",
-    "@radix-ui/react-slot": "^1.1.2",
-    "@radix-ui/react-tooltip": "^1.1.8",
-    "@supabase/supabase-js": "^2.49.1",
-    "@tanstack/react-table": "^8.21.2",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "lucide-react": "^0.479.0",
-    "next": "15.2.1",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-hook-form": "^7.54.2",
-    "tailwind-merge": "^3.0.2",
-    "tailwindcss-animate": "^1.0.7",
-    "xlsx": "^0.18.5",
-    "zod": "^3.24.2"
-  },
-  "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "15.2.1",
-    "tailwindcss": "^4",
-    "typescript": "^5"
-  }
-}
-
-================
 File: postcss.config.mjs
 ================
 const config = {
@@ -716,1195 +649,6 @@ File: public/vercel.svg
 File: public/window.svg
 ================
 <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M1.5 2.5h13v10a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1zM0 1h16v11.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 0 12.5zm3.75 4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M7 4.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m1.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5" fill="#666"/></svg>
-
-================
-File: README.md
-================
-Proyecto de Precios Unitarios de Actividades y Elementos de Construccion.
-
-Creado en Next.js y Supabase
-
-## Getting Started
-
-First, run the development server:
-
-```bash
-npm run dev
-
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-================
-File: src/app/actividad-detalle/[id]/page.tsx
-================
-// src/app/actividad-detalle/[id]/page.tsx
-"use client"; // Marcar como componente del cliente
-
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { Actividad } from "@/types/actividad";
-import { Elemento } from "@/types/elemento";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-
-import { getActividadById, updateActividad } from "@/services/actividadService";
-import {
-  getElementosNoAsignados,
-  getElementosAsignados,
-  asignarElemento,
-  desasignarElemento,
-} from "@/services/actividad-elemento";
-
-export default function ActividadDetallePage() {
-  const { id } = useParams(); // Obtener el ID de la URL
-  const [actividad, setActividad] = useState<Actividad | null>(null);
-  const [elementosAsignados, setElementosAsignados] = useState<Elemento[]>([]);
-  const [elementosDisponibles, setElementosDisponibles] = useState<Elemento[]>([]);
-  const [mostrarAsignarElemento, setMostrarAsignarElemento] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  // Cargar la actividad y los elementos asignados al montar el componente
-  useEffect(() => {
-    const loadData = async () => {
-      if (id) {
-        const actividadId = Number(id);
-        const actividad = await getActividadById(actividadId);
-        setActividad(actividad);
-  
-        const elementosAsignados = await getElementosAsignados(actividadId);
-        setElementosAsignados(elementosAsignados);
-      }
-    };
-  
-    loadData();
-  }, [id]);
-
-  // Cargar elementos disponibles cuando se muestra la sección de asignar
-  useEffect(() => {
-    const loadElementosDisponibles = async () => {
-      if (mostrarAsignarElemento && actividad?.id) {
-        const elementos = await getElementosNoAsignados(actividad.id);
-        setElementosDisponibles(elementos);
-      }
-    };
-
-    loadElementosDisponibles();
-  }, [mostrarAsignarElemento, actividad]);
-
-  const handleAsignarElemento = async (elemento: Elemento) => {
-    if (!actividad?.id || !elemento?.id) return;
-  
-    setLoading(true);
-    try {
-      // Asignar el elemento a la actividad
-      await asignarElemento(actividad.id, elemento.id);
-  
-      // Calcular el nuevo precio unitario
-      const nuevoPrecioUnitario = actividad.precio_unitario + elemento.precio_unitario;
-  
-      // Actualizar el precio unitario en la base de datos
-      await updateActividad(actividad.id, { precio_unitario: nuevoPrecioUnitario });
-  
-      // Actualizar el estado local de la actividad
-      const updatedActividad = { ...actividad, precio_unitario: nuevoPrecioUnitario };
-      setActividad(updatedActividad);
-  
-      // Actualizar las listas de elementos
-      setElementosDisponibles((prev) => prev.filter((e) => e.id !== elemento.id));
-      setElementosAsignados((prev) => [...prev, elemento]);
-    } catch (error) {
-      console.error("Error asignando elemento:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Función para desasignar un elemento de la actividad
-  const handleDesasignarElemento = async (elementoId: number) => {
-    if (!actividad?.id) return;
-
-    try {
-      await desasignarElemento(actividad.id, elementoId);
-
-      // Actualizar el precio unitario de la actividad
-      const elemento = elementosAsignados.find((e) => e.id === elementoId);
-      if (elemento) {
-        const updatedActividad = { ...actividad, precio_unitario: actividad.precio_unitario - elemento.precio_unitario };
-        setActividad(updatedActividad);
-      }
-
-      // Actualizar las listas de elementos
-      setElementosAsignados((prev) => prev.filter((e) => e.id !== elementoId));
-      setElementosDisponibles((prev) => [...prev, ...elementosAsignados.filter((e) => e.id === elementoId)]);
-    } catch (error) {
-      console.error("Error desasignando elemento:", error);
-    }
-  };
-
-  // Filtrar elementos disponibles según el término de búsqueda
-  const filteredElementos = elementosDisponibles.filter((elemento) =>
-    Object.values(elemento).some((value) =>
-      value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
-
-  if (!actividad) {
-    return <div>Cargando...</div>;
-  }
-
-  return (
-    <div className="container mx-auto py-10">
-      <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold">Detalle de la Actividad</h1>
-      </div>
-
-      {/* Detalles de la actividad */}
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Código</TableHead>
-            <TableHead>Nombre</TableHead>
-            <TableHead>Unidad</TableHead>
-            <TableHead>Precio Unitario</TableHead>
-            <TableHead>Acciones</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow>
-            <TableCell>{actividad.codigo}</TableCell>
-            <TableCell>{actividad.nombre}</TableCell>
-            <TableCell>{actividad.unidad}</TableCell>
-            <TableCell>{actividad.precio_unitario}</TableCell>
-            <TableCell>
-              <Button onClick={() => setMostrarAsignarElemento(!mostrarAsignarElemento)}>
-                {mostrarAsignarElemento ? "Ocultar" : "Asignar"}
-              </Button>
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-
-      {/* Elementos asignados */}
-      <div className="mt-8">
-        <h2 className="text-xl font-bold mb-4">Elementos Asignados</h2>
-        {elementosAsignados.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Código</TableHead>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Unidad</TableHead>
-                <TableHead>Precio Unitario</TableHead>
-                <TableHead>Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {elementosAsignados.map((elemento) => (
-                <TableRow key={elemento.id}>
-                  <TableCell>{elemento.codigo}</TableCell>
-                  <TableCell>{elemento.nombre}</TableCell>
-                  <TableCell>{elemento.unidad}</TableCell>
-                  <TableCell>{elemento.precio_unitario}</TableCell>
-                  <TableCell>
-                    <Button onClick={() => handleDesasignarElemento(elemento.id!)}>
-                      Quitar
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <p>No hay elementos asignados a esta actividad.</p>
-        )}
-      </div>
-
-      {/* Elementos disponibles para asignar */}
-      {mostrarAsignarElemento && (
-        <div className="mt-8">
-          <h2 className="text-xl font-bold mb-4">Elementos Disponibles</h2>
-          <div className="flex justify-end">
-            <input
-              type="text"
-              placeholder="Buscar..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              
-            />
-          </div>
-          {filteredElementos.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Código</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Unidad</TableHead>
-                  <TableHead>Precio Unitario</TableHead>
-                  <TableHead>Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredElementos.map((elemento) => (
-                  <TableRow key={elemento.id}>
-                    <TableCell>{elemento.codigo}</TableCell>
-                    <TableCell>{elemento.nombre}</TableCell>
-                    <TableCell>{elemento.unidad}</TableCell>
-                    <TableCell>{elemento.precio_unitario}</TableCell>
-                    <TableCell>
-                      <Button onClick={() => handleAsignarElemento(elemento)}>
-                        Asignar
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <p>No hay elementos disponibles para asignar.</p>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-================
-File: src/app/actividades/columns.tsx
-================
-"use client";
-import { ColumnDef } from "@tanstack/react-table";
-import {
-  MoreHorizontal,
-  ArrowUpRight,
-  Pencil,
-  Trash2,
-  CheckIcon,
-  PlusIcon,
-} from "lucide-react";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { Actividad, UNIDADES } from "@/types/actividad";
-import Link from "next/link";
-
-import { deleteActividad, updateActividad } from "@/services/actividadService";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { memo } from "react";
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
-
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import NewActivityForm from "./NewActivityForm";
-
-interface DialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  actividad: Actividad;
-}
-
-const EditableCell = memo(
-  ({
-    value,
-    onSave,
-  }: {
-    value: string;
-    onSave: (newValue: string) => void;
-  }) => {
-    const [editingValue, setEditingValue] = useState(value);
-
-    const handleSave = () => {
-      onSave(editingValue);
-    };
-
-    return (
-      <div className="flex gap-2">
-        <Input
-          value={editingValue}
-          onChange={(e) => setEditingValue(e.target.value)}
-          autoFocus
-        />
-        <Button variant="ghost" size="icon" onClick={handleSave}>
-          <CheckIcon className="h-4 w-4" />
-        </Button>
-      </div>
-    );
-  }
-);
-
-export default EditableCell;
-
-const handleDelete = async (id: string) => {
-  if (!window.confirm("¿Estás seguro de eliminar?")) return;
-
-  try {
-    await deleteActividad(id);
-    window.location.reload();
-  } catch (error) {
-    console.error("Error al eliminar el gasto:", error);
-    alert("Hubo un error al eliminar el gasto");
-  }
-};
-
-export const columns: ColumnDef<Actividad>[] = [
-  {
-    id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && "indeterminate")
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    id: "codigo",
-    accessorKey: "codigo",
-    header: "Código",
-    enableGlobalFilter: true,
-    cell: ({ row }) => {
-      const actividad = row.original;
-      return (
-        <Link
-          href={`/actividad-detalle/${actividad.id}`} // Ruta dinámica
-          className="text-blue-500 hover:underline"
-        >
-          {actividad.codigo}
-        </Link>
-      );
-    },
-  },
-  {
-    id: "nombre",
-    accessorKey: "nombre",
-    enableGlobalFilter: true,
-    header: "Nombre",
-    cell: ({ row }) => {
-      const actividad = row.original;
-      return (
-        <Link
-          href={`/actividad-detalle/${actividad.id}`} // Ruta dinámica
-          className="text-blue-500 hover:underline"
-        >
-          {actividad.nombre}
-        </Link>
-      );
-    },
-  },
-  {
-    id: "descripcion",
-    accessorKey: "descripcion",
-    header: "Descripción",
-    enableGlobalFilter: true,
-  },
-  {
-    id: "unidad",
-    accessorKey: "unidad",
-    header: "Unidad",
-  },
-  {
-    id: "acciones",
-    header: "Acciones",
-    cell: ({ row }) => {
-      const [isEditing, setIsEditing] = useState(false);
-      const actividad = row.original;
-  
-      // Estados para los campos editables
-      const [codigoEditado, setCodigoEditado] = useState(actividad.codigo);
-      const [nombreEditado, setNombreEditado] = useState(actividad.nombre);
-      const [descripcionEditada, setDescripcionEditada] = useState(actividad.descripcion);
-      const [unidadEditada, setUnidadEditada] = useState(actividad.unidad);
-  
-      const handleSave = async () => {
-        const updatedActividad = {
-          ...actividad,
-          codigo: codigoEditado,
-          nombre: nombreEditado,
-          descripcion: descripcionEditada,
-          unidad: unidadEditada,
-        };
-  
-        try {
-          await updateActividad(updatedActividad.id, updatedActividad);
-          setIsEditing(false);
-          window.location.reload(); // Recargar la página para reflejar los cambios
-        } catch (error) {
-          console.error("Error al actualizar la actividad:", error);
-          alert("Hubo un error al actualizar la actividad");
-        }
-      };
-  
-      return (
-        <div className="flex gap-2">
-          {/* Botón Editar */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsEditing(true)}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-  
-          {/* Botón Eliminar */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleDelete(actividad.id.toString())}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-  
-          {/* Diálogo de edición */}
-          <Dialog open={isEditing} onOpenChange={setIsEditing}>
-            <DialogContent>
-              <DialogTitle>Editar Actividad</DialogTitle>
-              <div className="space-y-4">
-                {/* Campo Código */}
-                <div>
-                  <label className="block text-sm font-medium mb-1">Código</label>
-                  <Input
-                    value={codigoEditado}
-                    onChange={(e) => setCodigoEditado(e.target.value)}
-                    placeholder="Código"
-                  />
-                </div>
-  
-                {/* Campo Nombre */}
-                <div>
-                  <label className="block text-sm font-medium mb-1">Nombre</label>
-                  <Input
-                    value={nombreEditado}
-                    onChange={(e) => setNombreEditado(e.target.value)}
-                    placeholder="Nombre"
-                  />
-                </div>
-  
-                {/* Campo Descripción */}
-                <div>
-                  <label className="block text-sm font-medium mb-1">Descripción</label>
-                  <Input
-                    value={descripcionEditada}
-                    onChange={(e) => setDescripcionEditada(e.target.value)}
-                    placeholder="Descripción"
-                  />
-                </div>
-  
-                {/* Campo Unidad (Select) */}
-                <div>
-                  <label className="block text-sm font-medium mb-1">Unidad</label>
-                  <Select
-                    value={unidadEditada}
-                    onValueChange={(value) => setUnidadEditada(value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona una unidad" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {UNIDADES.map((unidad) => (
-                        <SelectItem key={unidad} value={unidad}>
-                          {unidad}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-  
-                {/* Botones de acción */}
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsEditing(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleSave}>Guardar</Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-      );
-    },
-  },
-];
-
-================
-File: src/app/actividades/NewActivityForm.tsx
-================
-// src/app/actividades/NewActivityForm.tsx
-"use client";
-
-import { useState } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { PlusIcon } from "lucide-react";
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { createActividad } from "@/services/actividadService";
-import { ActividadCreate } from "@/types/actividad";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
-import { UNIDADES } from "@/types/actividad";
-
-interface FormValues {
-  codigo: string;
-  nombre: string;
-  descripcion: string;
-  unidad: string;
-  precio_unitario: number;
-}
-
-export default function NewActivityForm() {
-  const [isOpen, setIsOpen] = useState(false);
-  const form = useForm<FormValues>();
-
-  const onSubmit: SubmitHandler<FormValues> = async (data) => {
-    try {
-      const result = await createActividad(data);
-      if (result.success) {
-        setIsOpen(false);
-        window.location.reload();
-      } else {
-        alert(result.error);
-      }
-    } catch (error) {
-      console.error("Error creating actividad:", error);
-      alert("Hubo un error al crear la actividad");
-    }
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <PlusIcon className="w-4 h-4 mr-1" />
-          Agregar Actividad
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogTitle>Nueva Actividad</DialogTitle>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="codigo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Código</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="nombre"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nombre</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="descripcion"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descripción</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="unidad"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Unidad</FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona una unidad" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {UNIDADES.map((unidad) => (
-                          <SelectItem key={unidad} value={unidad}>
-                            {unidad}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="flex justify-end">
-              <Button
-                variant="destructive"
-                onClick={() => setIsOpen(false)}
-                className="mr-2"
-              >
-                Cancelar
-              </Button>
-              <Button type="submit">Crear Actividad</Button>
-            </div>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-================
-File: src/app/actividades/page.tsx
-================
-import Link from 'next/link';
-import { getActividades } from "@/services/actividadService";
-import { Actividad } from "@/types/actividad";
-import { DataTable } from "@/components/ui/data-table";
-import { columns } from "./columns";
-import NewActivityForm from "./NewActivityForm";
-
-export default async function HomePage() {
-  const actividades: Actividad[] = await getActividades({ cache: "no-store" });
-
-  return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-2xl font-bold mb-4 text-center">Base de Actividades</h1>
-
-      {/* Tabla de actividades con el botón "Agregar" */}
-      <DataTable
-        columns={columns}
-        data={actividades}
-        addButton={<NewActivityForm />}
-      />
-
-      
-    </div>
-  );
-}
-
-================
-File: src/app/elementos/columns.tsx
-================
-"use client";
-import { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, ArrowUpRight, Pencil, Trash2, CheckIcon, PlusIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { Elemento } from "@/types/elemento";
-
-import { deleteElemento, updateElemento } from "@/services/elementoService";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { memo } from "react";
-import { Dialog, DialogTrigger, DialogContent } from "@/components/ui/dialog";
-import { ArrowUpDown } from "lucide-react"
- 
-
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import NewElementForm from "./NewElementForm";
-
-
-interface DialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  elemento: Elemento;
-}
-
-interface EditableCellProps {
-  value: number;
-  onSave: (newValue: number) => void;
-}
-
-const EditableCell = memo(({ value, onSave }: EditableCellProps) => {
-  const [editingValue, setEditingValue] = useState(value.toString());
-
-  const handleSave = () => {
-    const numericValue = parseFloat(editingValue);
-    if (!isNaN(numericValue)) {
-      onSave(numericValue);
-    } else {
-      alert("Por favor, ingresa un valor numérico válido.");
-    }
-  };
-
-  return (
-    <div className="flex gap-2">
-      <Input
-        type="number"
-        value={editingValue}
-        onChange={(e) => setEditingValue(e.target.value)}
-        autoFocus
-      />
-      <Button variant="ghost" size="icon" onClick={handleSave}>
-        <CheckIcon className="h-4 w-4" />
-      </Button>
-    </div>
-  );
-});
-
-EditableCell.displayName = "EditableCell"; // Para evitar problemas con React.memo
-
-
-const handleDelete = async (id:number) => {
-  if (!window.confirm("¿Estás seguro de eliminar este elemento?")) return;
-
-  try {
-    await deleteElemento(id);
-    window.location.reload();
-  } catch (error) {
-    console.error("Error al eliminar el elemento:", error);
-    alert("Hubo un error al eliminar el elemento");
-  }
-};
-
-export const columns: ColumnDef<Elemento>[] = [
-  {
-    id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && "indeterminate")
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    id: "codigo",
-    accessorKey: "codigo",
-    header: "Código",
-  },
-  {
-    id: "nombre",
-    accessorKey: "nombre",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Nombre
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      )
-    },
-   /*  cell: ({ row }) => {
-      const [isEditing, setIsEditing] = useState(false);
-      const elemento = row.original;
-  
-      const handleSave = async (newValue: string) => {
-        const updatedElemento = { ...elemento, nombre: newValue };
-        try {
-          await updateElemento(updatedElemento.id, updatedElemento);
-          setIsEditing(false);
-          window.location.reload();
-        } catch (error) {
-          console.error("Error al actualizar el elemento:", error);
-          alert("Hubo un error al actualizar el elemento");
-        }
-      };
-  
-      return isEditing ? (
-        <EditableCell value={elemento.nombre} onSave={handleSave} />
-      ) : (
-        <span onClick={() => setIsEditing(true)}>{elemento.nombre}</span>
-      );
-    }, */
-  },
-  {
-    id: "tipo",
-    accessorKey: "tipo",
-    header:"Tipo",
-  },
-  {
-    id: "unidad",
-    accessorKey: "unidad",
-    header: "Unidad",
-  },
-  {
-    id: "precio_unitario",
-    accessorKey: "precio_unitario",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Precio Unitario
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => {
-      const [isEditing, setIsEditing] = useState(false);
-      const elemento = row.original;
-  
-      const handleSave = async (newValue: number) => {
-        const updatedElemento = { 
-          ...elemento, 
-          precio_unitario: newValue,
-          fecha: new Date(), // Actualizar la fecha al momento de guardar
-        };
-  
-        try {
-          await updateElemento(updatedElemento.id, updatedElemento);
-          setIsEditing(false);
-          window.location.reload(); // Recargar la página para reflejar los cambios
-        } catch (error) {
-          console.error("Error al actualizar el elemento:", error);
-          alert("Hubo un error al actualizar el elemento");
-        }
-      };
-  
-      return isEditing ? (
-        <EditableCell value={elemento.precio_unitario} onSave={handleSave} />
-      ) : (
-        <span onClick={() => setIsEditing(true)}>{elemento.precio_unitario}</span>
-      );
-    },
-  },
-  {
-    id: "fecha",
-    accessorKey: "fecha",
-    header: "Fecha",
-   /*  cell: ({ row }) => {
-      const fecha = row.original.fecha;
-      return <span>{fecha.toDateString}</span>; // Formatear la fecha
-    }, */
-  },
-  {
-    id: "acciones",
-    header: "Acciones",
-    cell: ({ row }) => {
-      const [isEditing, setIsEditing] = useState(false);
-      const elemento = row.original;
-  
-      const handleSave = async (updatedElemento: Elemento) => {
-        try {
-          await updateElemento(updatedElemento.id, updatedElemento);
-          setIsEditing(false);
-          window.location.reload();
-        } catch (error) {
-          console.error("Error al actualizar el elemento:", error);
-          alert("Hubo un error al actualizar el elemento");
-        }
-      };
-  
-      return (
-        <div className="flex gap-2">
-         
-  
-          {/* Botón Editar */}
-          {isEditing ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleSave(elemento)}
-            >
-              <CheckIcon className="h-4 w-4" />
-            </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsEditing(true)}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-          )}
-  
-          {/* Botón Eliminar */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleDelete(elemento.id)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      );
-    },
-  }
-];
-
-================
-File: src/app/elementos/NewElementForm.tsx
-================
-"use client";
-
-import { useState } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogTrigger, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { PlusIcon } from "lucide-react";
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { createElemento } from "@/services/elementoService";
-import { ElementoCreate } from "@/types/elemento";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
-
-import { UNIDADES, TIPOS } from "@/types/elemento";
-
-interface FormValues {
-  codigo: string;
-  nombre: string;
-  tipo: string;
-  unidad: string;
-  precio_unitario: number;
-  fecha: Date;
-}
-
-export default function NewElementForm() {
-  const [isOpen, setIsOpen] = useState(false);
-  const form = useForm<FormValues>();
-
-  const onSubmit: SubmitHandler<FormValues> = async (data) => {
-    try {
-      const result = await createElemento(data);
-      if (result.success) {
-        setIsOpen(false);
-        window.location.reload();
-      } else {
-        alert(result.error);
-      }
-    } catch (error) {
-      console.error("Error creating elemento:", error);
-      alert("Hubo un error al crear el elemento");
-    }
-  };
-
-  return (
-    <div className="flex justify-end mb-4">
-       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <PlusIcon className="w-4 h-4 mr-1" />
-          Agregar Elemento
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogTitle>Nuevo Elemento </DialogTitle>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="codigo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Código</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="nombre"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nombre</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="tipo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tipo</FormLabel>
-                    <FormControl>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecciona un tipo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {TIPOS.map((tipo) => (
-                            <SelectItem key={tipo} value={tipo}>
-                              {tipo}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="unidad"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unidad</FormLabel>
-                    <FormControl>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecciona una unidad" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {UNIDADES.map((unidad) => (
-                            <SelectItem key={unidad} value={unidad}>
-                              {unidad}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="precio_unitario"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Precio Unitario</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="flex justify-end mb-4">
-                <Button type="submit">Crear Elemento</Button>
-              </div>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
 
 ================
 File: src/app/elementos/page.tsx
@@ -2063,104 +807,12 @@ File: src/app/globals.css
 }
 
 ================
-File: src/app/layout.tsx
-================
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import {
-  NavigationMenu,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  navigationMenuTriggerStyle,
-} from "@/components/ui/navigation-menu";
-import Link from "next/link";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  title: "Analisis PU",
-  description: "App en Next",
-};
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="en">
-      <body>
-
-       <div className="flex justify-end p-4">
-       <NavigationMenu>
-          <NavigationMenuItem>
-          <Link href="/" legacyBehavior passHref>
-              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                Inicio
-              </NavigationMenuLink>
-            </Link>
-            <Link href="/actividades" legacyBehavior passHref>
-              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                Actividades
-              </NavigationMenuLink>
-            </Link>
-            <Link href="/elementos" legacyBehavior passHref>
-              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                Elementos
-              </NavigationMenuLink>
-            </Link>
-            <Link href="/resumen" legacyBehavior passHref>
-              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                Resumen
-              </NavigationMenuLink>
-            </Link>
-          </NavigationMenuItem>
-        </NavigationMenu>
-
-       </div>
-
-        <main className="p-4">{children}</main>
-      </body>
-    </html>
-  );
-}
-
-================
-File: src/app/page.tsx
-================
-import { redirect } from "next/navigation"; // Importa redirect desde next/navigation
-
-export default async function MyServerComponent() {
-  // Lógica del servidor
-  const shouldRedirect = true; // Condición para redireccionar
-
-  if (shouldRedirect) {
-    redirect("/actividades"); // Redirecciona a /actividades
-  }
-
-  return (
-    <div>
-      <h1>Pagina principal</h1>
-    </div>
-  );
-}
-
-================
 File: src/app/resumen/page.tsx
 ================
 // src/app/resumen/page.tsx
-"use client"; // Marcar como componente del cliente
+"use client";
 
-import { useState, useEffect } from "react"; // Importar useEffect
+import { useState, useEffect } from "react";
 import { Actividad } from "@/types/actividad";
 import { Elemento } from "@/types/elemento";
 import { getActividades } from "@/services/actividadService";
@@ -2180,16 +832,14 @@ export default function ResumenPage() {
   const [elementosPorActividad, setElementosPorActividad] = useState<{
     [key: number]: Elemento[];
   }>({});
+  const [expandedActividades, setExpandedActividades] = useState<{ [key: number]: boolean }>({});
 
-  // Cargar actividades y elementos asignados después de que el componente se monte
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Obtener todas las actividades
         const actividades = await getActividades();
         setActividades(actividades);
 
-        // Obtener elementos asignados para cada actividad
         const elementosPorActividad: { [key: number]: Elemento[] } = {};
         for (const actividad of actividades) {
           const elementosAsignados = await getElementosAsignados(actividad.id);
@@ -2202,7 +852,14 @@ export default function ResumenPage() {
     };
 
     loadData();
-  }, []); // El array vacío [] asegura que esto solo se ejecute una vez
+  }, []);
+
+  const toggleElementos = (actividadId: number) => {
+    setExpandedActividades((prev) => ({
+      ...prev,
+      [actividadId]: !prev[actividadId],
+    }));
+  };
 
   return (
     <div className="container mx-auto py-10">
@@ -2227,15 +884,11 @@ export default function ResumenPage() {
               <TableCell>{actividad.precio_unitario}</TableCell>
               <TableCell>
                 <Button
-                  onClick={() => {
-                    // Alternar la visibilidad de los elementos asignados
-                    setElementosPorActividad((prev) => ({
-                      ...prev,
-                      [actividad.id]: prev[actividad.id] ? [] : elementosPorActividad[actividad.id],
-                    }));
-                  }}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleElementos(actividad.id)}
                 >
-                  {elementosPorActividad[actividad.id]?.length ? "Ocultar" : "Mostrar"} Elementos
+                  {expandedActividades[actividad.id] ? "-" : "+"}
                 </Button>
               </TableCell>
             </TableRow>
@@ -2243,10 +896,9 @@ export default function ResumenPage() {
         </TableBody>
       </Table>
 
-      {/* Mostrar elementos asignados para cada actividad */}
       {actividades.map((actividad) => (
         <div key={actividad.id} className="mt-4">
-          {elementosPorActividad[actividad.id]?.length > 0 && (
+          {expandedActividades[actividad.id] && (
             <div className="ml-8">
               <h2 className="text-xl font-bold mb-2">Elementos de {actividad.nombre}</h2>
               <Table>
@@ -2374,313 +1026,6 @@ function Checkbox({
 }
 
 export { Checkbox }
-
-================
-File: src/components/ui/data-table-pagination.tsx
-================
-import { Table } from "@tanstack/react-table"
-import {
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-} from "lucide-react"
-
-import { Input } from "@/components/ui/input";
-
-import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-
-interface DataTablePaginationProps<TData> {
-  table: Table<TData>
-}
-
-export function DataTablePagination<TData>({
-  table,
-}: DataTablePaginationProps<TData>) {
-  return (
-    <div className="flex items-center justify-between px-2">
-      <div className="flex-1 text-sm text-muted-foreground">
-        {table.getFilteredSelectedRowModel().rows.length} of{" "}
-        {table.getFilteredRowModel().rows.length} row(s) selected.
-      </div>
-      <div className="flex items-center space-x-6 lg:space-x-8">
-        <div className="flex items-center space-x-2">
-          <p className="text-sm font-medium">Rows per page</p>
-          <Select
-            value={`${table.getState().pagination.pageSize}`}
-            onValueChange={(value) => {
-              table.setPageSize(Number(value))
-            }}
-          >
-            <SelectTrigger className="h-8 w-[70px]">
-              <SelectValue placeholder={table.getState().pagination.pageSize} />
-            </SelectTrigger>
-            <SelectContent side="top">
-              {[10, 20, 30, 40, 50].map((pageSize) => (
-                <SelectItem key={pageSize} value={`${pageSize}`}>
-                  {pageSize}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-          Page {table.getState().pagination.pageIndex + 1} of{" "}
-          {table.getPageCount()}
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            className="hidden h-8 w-8 p-0 lg:flex"
-            onClick={() => table.setPageIndex(0)}
-            disabled={!table.getCanPreviousPage()}
-          >
-            <span className="sr-only">Go to first page</span>
-            <ChevronsLeft />
-          </Button>
-          <Button
-            variant="outline"
-            className="h-8 w-8 p-0"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            <span className="sr-only">Go to previous page</span>
-            <ChevronLeft />
-          </Button>
-          <Button
-            variant="outline"
-            className="h-8 w-8 p-0"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            <span className="sr-only">Go to next page</span>
-            <ChevronRight />
-          </Button>
-          <Button
-            variant="outline"
-            className="hidden h-8 w-8 p-0 lg:flex"
-            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-            disabled={!table.getCanNextPage()}
-          >
-            <span className="sr-only">Go to last page</span>
-            <ChevronsRight />
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-================
-File: src/components/ui/data-table-toolbar.tsx
-================
-"use client";
-
-import { Table } from "@tanstack/react-table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Download, PlusCircle } from "lucide-react";
-import * as XLSX from "xlsx";
-import { useState } from "react";
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import React from "react";
-import NewActivityForm from "@/app/actividades/NewActivityForm";
-
-interface DataTableToolbarProps<TData> {
-  table: Table<TData>;
-  onAddClick?: () => void; // Prop opcional para manejar el clic en "Agregar"
-}
-
-export function DataTableToolbar<TData>({
-  table,
-  
-}: DataTableToolbarProps<TData>) {
-
-
-  
-
-  const exportToExcel = () => {
-    const exportData = table.getRowModel().rows.map((row) => {
-      const rowData: any = {};
-      row.getVisibleCells().forEach((cell) => {
-        const column = cell.column.columnDef;
-        rowData[column.header as string] = cell.getValue();
-      });
-      return rowData;
-    });
-
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "listado");
-    XLSX.writeFile(workbook, "tabla.xlsx");
-  };
-
-  return (
-    <div className="flex items-center justify-between py-4">
-
-         {/* Botones a la derecha */}
-         <div className="flex space-x-2">
-        <Button variant="outline" size="sm" onClick={exportToExcel}>
-          <Download className="w-4 h-4 mr-1" />
-          Exportar Excel
-        </Button>
-    
-      </div>
-    </div>
-  );
-}
-
-================
-File: src/components/ui/data-table.tsx
-================
-// src/components/ui/data-table.tsx
-"use client";
-
-import * as React from "react";
-import {
-  ColumnDef,
-  SortingState,
-  flexRender,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  getFilteredRowModel,
-} from "@tanstack/react-table";
-
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Input } from "./input";
-import { useState, useEffect } from "react";
-
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
-  data: TData[];
-  addButton?: React.ReactNode; // Prop para el botón "Agregar" con su lógica de diálogo
-}
-
-export function DataTable<TData, TValue>({
-  columns,
-  data,
-  addButton,
-}: DataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [rowSelection, setRowSelection] = React.useState({});
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-
-  const table = useReactTable({
-    data,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    onRowSelectionChange: setRowSelection,
-    onSortingChange: setSorting,
-    getSortedRowModel: getSortedRowModel(),
-    state: {
-      sorting,
-      rowSelection,
-      globalFilter, // Conecta el globalFilter con el estado de la tabla
-    },
-    onGlobalFilterChange: setGlobalFilter, // Actualiza el globalFilter cuando cambia
-    getFilteredRowModel: getFilteredRowModel(), // Habilita el filtrado global
-  });
-
-  // Conecta el searchTerm con el globalFilter
-  useEffect(() => {
-    setGlobalFilter(searchTerm);
-  }, [searchTerm]);
-
-  return (
-    <div className="flex flex-col space-y-4">
-      {/* Contenedor para el input y el botón */}
-      <div className="flex items-center justify-between">
-        {/* Input de búsqueda a la izquierda */}
-        <div className="flex-1">
-          <Input
-            placeholder="Buscar..."
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)} // Actualiza el searchTerm
-            className="max-w-sm"
-          />
-        </div>
-
-        {/* Botón "Agregar" a la derecha */}
-        <div className="flex justify-end">
-          {addButton} {/* Renderiza el botón "Agregar" pasado como prop */}
-        </div>
-      </div>
-
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  );
-}
 
 ================
 File: src/components/ui/dialog.tsx
@@ -3543,124 +1888,656 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 ================
-File: src/services/actividad-elemento.ts
+File: tsconfig.json
 ================
-// src/services/actividad-elemento.ts
-import { supabase } from "@/lib/supabase";
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+
+================
+File: README.md
+================
+Proyecto de Precios Unitarios de Actividades y Elementos de Construccion.
+
+Creado en Next.js y Supabase
+
+## Getting Started
+
+First, run the development server:
+
+```bash
+npm run dev
+
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+================
+File: src/app/elementos/columns.tsx
+================
+"use client";
+import { ColumnDef } from "@tanstack/react-table";
+import { MoreHorizontal, ArrowUpRight, Pencil, Trash2, CheckIcon, PlusIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import { Elemento } from "@/types/elemento";
-import { ActividadElementos } from "@/types/actividadElementos";
+
+import { deleteElemento, updateElemento } from "@/services/elementoService";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { memo } from "react";
+
+import { ArrowUpDown } from "lucide-react"
+ 
 
 
 
-// Crear un nuevo elemento
+interface DialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  elemento: Elemento;
+}
 
-  // Método para obtener todos los registros de la tabla actividad_elemento
-  export async function getActividadesConElementos(): Promise<any[]> {
-    
-    const { data, error } = await supabase
-      .from('actividad_elemento')
-      .select(`
-        actividad_id,
-        actividades:actividad_id (nombre),
-        elemento_id,
-        elementos:elemento_id (nombre),
-        cantidad,
-        
-      `);
+interface EditableCellProps {
+  value: number;
+  onSave: (newValue: number) => void;
+}
 
+const EditableCell = memo(({ value, onSave }: EditableCellProps) => {
+  const [editingValue, setEditingValue] = useState(value.toString());
 
-    if (error) {
-      console.error('Error fetching actividad_elemento:', error);
-      throw error;
+  const handleSave = () => {
+    const numericValue = parseFloat(editingValue);
+    if (!isNaN(numericValue)) {
+      onSave(numericValue);
+    } else {
+      alert("Por favor, ingresa un valor numérico válido.");
     }
+  };
 
-    return data || [];
-  }
+  return (
+    <div className="flex gap-2">
+      <Input
+        type="number"
+        value={editingValue}
+        onChange={(e) => setEditingValue(e.target.value)}
+        autoFocus
+      />
+      <Button variant="ghost" size="icon" onClick={handleSave}>
+        <CheckIcon className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+});
 
-  // src/services/actividad-elemento.ts
-export async function getElementosNoAsignados(actividadId: number): Promise<Elemento[]> {
+EditableCell.displayName = "EditableCell"; // Para evitar problemas con React.memo
+
+
+const handleDelete = async (id:number) => {
+  if (!window.confirm("¿Estás seguro de eliminar este elemento?")) return;
+
   try {
-    // Obtener los IDs de los elementos asignados
-    const { data: asignados, error: errorAsignados } = await supabase
-      .from("actividad_elemento")
-      .select("elemento_id")
-      .eq("actividad_id", actividadId);
-
-    if (errorAsignados) throw errorAsignados;
-
-    const idsAsignados = asignados.map((item) => item.elemento_id);
-
-    // Obtener los elementos no asignados
-    const { data: elementos, error: errorElementos } = await supabase
-      .from("elementos")
-      .select("*")
-      .not("id", "in", `(${idsAsignados.join(",")})`);
-
-    if (errorElementos) throw errorElementos;
-    return elementos || [];
+    await deleteElemento(id);
+    window.location.reload();
   } catch (error) {
-    console.error("Error fetching elementos no asignados:", error);
-    return [];
+    console.error("Error al eliminar el elemento:", error);
+    alert("Hubo un error al eliminar el elemento");
   }
+};
+
+export const columns: ColumnDef<Elemento>[] = [
+  {
+    id: "select",
+    header: ({ table }) => (
+      <Checkbox
+        checked={
+          table.getIsAllPageRowsSelected() ||
+          (table.getIsSomePageRowsSelected() && "indeterminate")
+        }
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Select row"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
+  {
+    id: "codigo",
+    accessorKey: "codigo",
+    header: "Código",
+  },
+  {
+    id: "nombre",
+    accessorKey: "nombre",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Nombre
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      )
+    },
+   /*  cell: ({ row }) => {
+      const [isEditing, setIsEditing] = useState(false);
+      const elemento = row.original;
+  
+      const handleSave = async (newValue: string) => {
+        const updatedElemento = { ...elemento, nombre: newValue };
+        try {
+          await updateElemento(updatedElemento.id, updatedElemento);
+          setIsEditing(false);
+          window.location.reload();
+        } catch (error) {
+          console.error("Error al actualizar el elemento:", error);
+          alert("Hubo un error al actualizar el elemento");
+        }
+      };
+  
+      return isEditing ? (
+        <EditableCell value={elemento.nombre} onSave={handleSave} />
+      ) : (
+        <span onClick={() => setIsEditing(true)}>{elemento.nombre}</span>
+      );
+    }, */
+  },
+  {
+    id: "tipo",
+    accessorKey: "tipo",
+    header:"Tipo",
+  },
+  {
+    id: "unidad",
+    accessorKey: "unidad",
+    header: "Unidad",
+  },
+  {
+    id: "precio_unitario",
+    accessorKey: "precio_unitario",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Precio Unitario
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const [isEditing, setIsEditing] = useState(false);
+      const elemento = row.original;
+  
+      const handleSave = async (newValue: number) => {
+        const updatedElemento = { 
+          ...elemento, 
+          precio_unitario: newValue,
+          fecha: new Date(), // Actualizar la fecha al momento de guardar
+        };
+  
+        try {
+          await updateElemento(updatedElemento.id, updatedElemento);
+          setIsEditing(false);
+          window.location.reload(); // Recargar la página para reflejar los cambios
+        } catch (error) {
+          console.error("Error al actualizar el elemento:", error);
+          alert("Hubo un error al actualizar el elemento");
+        }
+      };
+  
+      return isEditing ? (
+        <EditableCell value={elemento.precio_unitario} onSave={handleSave} />
+      ) : (
+        <span onClick={() => setIsEditing(true)}>{elemento.precio_unitario}</span>
+      );
+    },
+  },
+  {
+    id: "fecha",
+    accessorKey: "fecha",
+    header: "Fecha",
+   /*  cell: ({ row }) => {
+      const fecha = row.original.fecha;
+      return <span>{fecha.toDateString}</span>; // Formatear la fecha
+    }, */
+  },
+  {
+    id: "acciones",
+    header: "Acciones",
+    cell: ({ row }) => {
+      const [isEditing, setIsEditing] = useState(false);
+      const elemento = row.original;
+  
+      const handleSave = async (updatedElemento: Elemento) => {
+        try {
+          await updateElemento(updatedElemento.id, updatedElemento);
+          setIsEditing(false);
+          window.location.reload();
+        } catch (error) {
+          console.error("Error al actualizar el elemento:", error);
+          alert("Hubo un error al actualizar el elemento");
+        }
+      };
+  
+      return (
+        <div className="flex gap-2">
+         
+  
+          {/* Botón Editar */}
+          {isEditing ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleSave(elemento)}
+            >
+              <CheckIcon className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsEditing(true)}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
+  
+          {/* Botón Eliminar */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleDelete(elemento.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      );
+    },
+  }
+];
+
+================
+File: src/app/elementos/NewElementForm.tsx
+================
+"use client";
+
+import { useState } from "react";
+import { useForm, SubmitHandler } from "react-hook-form";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogTrigger, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { PlusIcon } from "lucide-react";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { createElemento } from "@/services/elementoService";
+
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+
+import { UNIDADES, TIPOS } from "@/types/elemento";
+
+interface FormValues {
+  codigo: string;
+  nombre: string;
+  tipo: string;
+  unidad: string;
+  precio_unitario: number;
+  fecha: Date;
 }
 
-  // src/services/actividad-elemento.ts
-// src/services/actividad-elemento.ts
-export async function asignarElemento(actividadId: number, elementoId: number): Promise<void> {
-  try {
-    const { data, error } = await supabase
-      .from("actividad_elemento")
-      .insert([{ actividad_id: actividadId, elemento_id: elementoId }])
-      .select(); // Agrega .select() para obtener la respuesta
+export default function NewElementForm() {
+  const [isOpen, setIsOpen] = useState(false);
+  const form = useForm<FormValues>();
 
-    if (error) {
-      console.error("Error en Supabase:", error);
-      throw error;
+  const onSubmit: SubmitHandler<FormValues> = async (data) => {
+    try {
+      const result = await createElemento(data);
+      if (result.success) {
+        setIsOpen(false);
+        window.location.reload();
+      } else {
+        alert(result.error);
+      }
+    } catch (error) {
+      console.error("Error creating elemento:", error);
+      alert("Hubo un error al crear el elemento");
     }
+  };
 
-    console.log("Elemento asignado correctamente:", data);
-  } catch (error) {
-    console.error("Error asignando elemento:", error);
-    throw error;
-  }
+  return (
+    <div className="flex justify-end mb-4">
+       <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          <PlusIcon className="w-4 h-4 mr-1" />
+          Agregar Elemento
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogTitle>Nuevo Elemento </DialogTitle>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="codigo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Código</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="nombre"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nombre</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="tipo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo</FormLabel>
+                    <FormControl>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona un tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TIPOS.map((tipo) => (
+                            <SelectItem key={tipo} value={tipo}>
+                              {tipo}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="unidad"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Unidad</FormLabel>
+                    <FormControl>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona una unidad" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {UNIDADES.map((unidad) => (
+                            <SelectItem key={unidad} value={unidad}>
+                              {unidad}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="precio_unitario"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Precio Unitario</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex justify-end mb-4">
+                <Button type="submit">Crear Elemento</Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }
 
-  // src/services/actividad-elemento.ts
-export async function desasignarElemento(actividadId: number, elementoId: number): Promise<void> {
-  try {
-    const { error } = await supabase
-      .from("actividad_elemento")
-      .delete()
-      .eq("actividad_id", actividadId)
-      .eq("elemento_id", elementoId);
+================
+File: src/app/page.tsx
+================
+import { redirect } from "next/navigation"; // Importa redirect desde next/navigation
 
-    if (error) throw error;
-  } catch (error) {
-    console.error("Error desasignando elemento:", error);
-    throw error;
+export default async function MyServerComponent() {
+  // Lógica del servidor
+  const shouldRedirect = true; // Condición para redireccionar
+
+  if (shouldRedirect) {
+    redirect("/actividades"); // Redirecciona a /actividades
   }
+
+  return (
+    <div>
+      <h1>Pagina principal</h1>
+    </div>
+  );
 }
 
+================
+File: src/components/ui/data-table.tsx
+================
+// src/components/ui/data-table.tsx
+"use client";
 
+import * as React from "react";
+import {
+  ColumnDef,
+  SortingState,
+  flexRender,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  getFilteredRowModel,
+} from "@tanstack/react-table";
 
-export async function getElementosAsignados(actividadId: number): Promise<Elemento[]> {
-  try {
-    const { data, error } = await supabase
-      .from("actividad_elemento")
-      .select("elementos(*)")
-      .eq("actividad_id", actividadId);
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Input } from "./input";
+import { useState, useEffect } from "react";
 
-    if (error) throw error;
+interface DataTableProps<TData, TValue> {
+  columns: ColumnDef<TData, TValue>[];
+  data: TData[];
+  addButton?: React.ReactNode; // Prop para el botón "Agregar" con su lógica de diálogo
+}
 
-    // Tipar la respuesta como un array de objetos con la propiedad "elementos"
-    const elementosAsignados = data as { elementos: Elemento }[];
+export function DataTable<TData, TValue>({
+  columns,
+  data,
+  addButton,
+}: DataTableProps<TData, TValue>) {
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [rowSelection, setRowSelection] = React.useState({});
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
-    // Extraer y devolver solo los elementos
-    return elementosAsignados.map((item) => item.elementos);
-  } catch (error) {
-    console.error("Error fetching elementos asignados:", error);
-    return [];
-  }
+  const table = useReactTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    onRowSelectionChange: setRowSelection,
+    onSortingChange: setSorting,
+    getSortedRowModel: getSortedRowModel(),
+    state: {
+      sorting,
+      rowSelection,
+      globalFilter, // Conecta el globalFilter con el estado de la tabla
+    },
+    onGlobalFilterChange: setGlobalFilter, // Actualiza el globalFilter cuando cambia
+    getFilteredRowModel: getFilteredRowModel(), // Habilita el filtrado global
+  });
+
+  // Conecta el searchTerm con el globalFilter
+  useEffect(() => {
+    setGlobalFilter(searchTerm);
+  }, [searchTerm]);
+
+  return (
+    <div className="flex flex-col space-y-4">
+      {/* Contenedor para el input y el botón */}
+      <div className="flex items-center justify-between">
+        {/* Input de búsqueda a la izquierda */}
+        <div className="flex-1">
+          <Input
+            placeholder="Buscar..."
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)} // Actualiza el searchTerm
+            className="max-w-sm"
+          />
+        </div>
+
+        {/* Botón "Agregar" a la derecha */}
+        <div className="flex justify-end">
+          {addButton} {/* Renderiza el botón "Agregar" pasado como prop */}
+        </div>
+      </div>
+
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  return (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && "selected"}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
+                  No results.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
 }
 
 ================
@@ -3754,143 +2631,6 @@ export async function deleteActividad(id: string): Promise<void> {
 }
 
 export {};
-
-================
-File: src/services/elementoService.ts
-================
-"use server"; 
-
-import { supabase } from "@/lib/supabase"; 
-import { Elemento, ElementoCreate } from "@/types/elemento"; 
-
-// Crear un nuevo elemento
-// src/services/elementoService.ts
-export async function createElemento(
-  elemento: ElementoCreate
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const elementoConFecha = {
-      ...elemento,
-      fecha: new Date(), // Agregar la fecha actual
-    };
-
-    const { data, error } = await supabase
-      .from("elementos")
-      .insert([elementoConFecha])
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error al crear el elemento:", error);
-      return { success: false, error: error.message };
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error("Error inesperado al crear el elemento:", error);
-    return { success: false, error: "Error inesperado" };
-  }
-}
-
-// Obtener todos los elementos
-export async function getElementos(): Promise<Elemento[]> {
-  try {
-    const { data, error } = await supabase.from("elementos").select("*");
-
-    if (error) throw error;
-
-    // Convertir el campo fecha a un objeto Date
-    return data.map((elemento) => ({
-      ...elemento,
-      //fecha: new Date(elemento.fecha), // Convertir a Date
-    }));
-  } catch (error) {
-    console.error("Error al obtener los elementos:", error);
-    throw error;
-  }
-}
-
-// Obtener elementos no asignados a una actividad
-export async function getElementosNoAsignados(
-  actividadId: number
-): Promise<Elemento[]> {
-  try {
-    const idsAsignados = await getIdsAsignados(actividadId);
-    const { data, error } = await supabase
-      .from("elementos")
-      .select("*")
-      .not("id", "in", `(${idsAsignados})`);
-
-    if (error) throw error;
-    return data || [];
-  } catch (error) {
-    console.error("Error al obtener elementos no asignados:", error);
-    throw error;
-  }
-}
-
-// Obtener IDs de elementos asignados a una actividad
-async function getIdsAsignados(actividadId: number): Promise<string> {
-  try {
-    const { data, error } = await supabase
-      .from("actividad_elemento")
-      .select("elemento_id")
-      .eq("actividad_id", actividadId);
-
-    if (error) throw error;
-    return data.map((item) => item.elemento_id).join(",");
-  } catch (error) {
-    console.error("Error al obtener IDs asignados:", error);
-    throw error;
-  }
-}
-
-// Actualizar un elemento
-export async function updateElemento(
-  id: number,
-  elemento: Partial<Elemento>
-): Promise<void> {
-  try {
-    const { error } = await supabase
-      .from("elementos")
-      .update(elemento)
-      .eq("id", id);
-
-    if (error) throw error;
-  } catch (error) {
-    console.error("Error al actualizar el elemento:", error);
-    throw error;
-  }
-}
-
-// Obtener un elemento por ID
-export async function getElementoById(id: number): Promise<Elemento | null> {
-  try {
-    const { data, error } = await supabase
-      .from("elementos")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error("Error al obtener el elemento:", error);
-    throw error;
-  }
-}
-
-// Eliminar un elemento
-export async function deleteElemento(id: number): Promise<void> {
-  try {
-    const { error } = await supabase.from("elementos").delete().eq("id", id);
-
-    if (error) throw error;
-  } catch (error) {
-    console.error("Error al eliminar el elemento:", error);
-    throw error;
-  }
-}
 
 ================
 File: src/types/actividad.ts
@@ -3995,34 +2735,1240 @@ export const TIPOS = [
 ] as const;
 
 ================
-File: tsconfig.json
+File: package.json
 ================
 {
-  "compilerOptions": {
-    "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+  "name": "apu-next",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "dependencies": {
+    "@hookform/resolvers": "^4.1.3",
+    "@radix-ui/react-checkbox": "^1.1.4",
+    "@radix-ui/react-dialog": "^1.1.6",
+    "@radix-ui/react-label": "^2.1.2",
+    "@radix-ui/react-navigation-menu": "^1.2.5",
+    "@radix-ui/react-select": "^2.1.6",
+    "@radix-ui/react-slot": "^1.1.2",
+    "@radix-ui/react-tooltip": "^1.1.8",
+    "@supabase/supabase-js": "^2.49.1",
+    "@tanstack/react-table": "^8.21.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.479.0",
+    "next": "15.2.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hook-form": "^7.54.2",
+    "tailwind-merge": "^3.0.2",
+    "tailwindcss-animate": "^1.0.7",
+    "xlsx": "^0.18.5",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.2.1",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
+
+================
+File: src/components/ui/data-table-pagination.tsx
+================
+import { Table } from "@tanstack/react-table"
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react"
+
+
+
+import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
+interface DataTablePaginationProps<TData> {
+  table: Table<TData>
+}
+
+export function DataTablePagination<TData>({
+  table,
+}: DataTablePaginationProps<TData>) {
+  return (
+    <div className="flex items-center justify-between px-2">
+      <div className="flex-1 text-sm text-muted-foreground">
+        {table.getFilteredSelectedRowModel().rows.length} of{" "}
+        {table.getFilteredRowModel().rows.length} row(s) selected.
+      </div>
+      <div className="flex items-center space-x-6 lg:space-x-8">
+        <div className="flex items-center space-x-2">
+          <p className="text-sm font-medium">Rows per page</p>
+          <Select
+            value={`${table.getState().pagination.pageSize}`}
+            onValueChange={(value) => {
+              table.setPageSize(Number(value))
+            }}
+          >
+            <SelectTrigger className="h-8 w-[70px]">
+              <SelectValue placeholder={table.getState().pagination.pageSize} />
+            </SelectTrigger>
+            <SelectContent side="top">
+              {[10, 20, 30, 40, 50].map((pageSize) => (
+                <SelectItem key={pageSize} value={`${pageSize}`}>
+                  {pageSize}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+          Page {table.getState().pagination.pageIndex + 1} of{" "}
+          {table.getPageCount()}
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            className="hidden h-8 w-8 p-0 lg:flex"
+            onClick={() => table.setPageIndex(0)}
+            disabled={!table.getCanPreviousPage()}
+          >
+            <span className="sr-only">Go to first page</span>
+            <ChevronsLeft />
+          </Button>
+          <Button
+            variant="outline"
+            className="h-8 w-8 p-0"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            <span className="sr-only">Go to previous page</span>
+            <ChevronLeft />
+          </Button>
+          <Button
+            variant="outline"
+            className="h-8 w-8 p-0"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            <span className="sr-only">Go to next page</span>
+            <ChevronRight />
+          </Button>
+          <Button
+            variant="outline"
+            className="hidden h-8 w-8 p-0 lg:flex"
+            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+            disabled={!table.getCanNextPage()}
+          >
+            <span className="sr-only">Go to last page</span>
+            <ChevronsRight />
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+================
+File: src/components/ui/data-table-toolbar.tsx
+================
+"use client";
+
+import { Table } from "@tanstack/react-table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Download, PlusCircle } from "lucide-react";
+import * as XLSX from "xlsx";
+
+import React from "react";
+
+
+interface DataTableToolbarProps<TData> {
+  table: Table<TData>;
+  onAddClick?: () => void; // Prop opcional para manejar el clic en "Agregar"
+}
+
+export function DataTableToolbar<TData>({
+  table,
+  
+}: DataTableToolbarProps<TData>) {
+
+
+  
+
+  const exportToExcel = () => {
+    const exportData = table.getRowModel().rows.map((row) => {
+      const rowData: any = {};
+      row.getVisibleCells().forEach((cell) => {
+        const column = cell.column.columnDef;
+        rowData[column.header as string] = cell.getValue();
+      });
+      return rowData;
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "listado");
+    XLSX.writeFile(workbook, "tabla.xlsx");
+  };
+
+  return (
+    <div className="flex items-center justify-between py-4">
+
+         {/* Botones a la derecha */}
+         <div className="flex space-x-2">
+        <Button variant="outline" size="sm" onClick={exportToExcel}>
+          <Download className="w-4 h-4 mr-1" />
+          Exportar Excel
+        </Button>
+    
+      </div>
+    </div>
+  );
+}
+
+================
+File: src/services/elementoService.ts
+================
+"use server"; 
+
+import { supabase } from "@/lib/supabase"; 
+import { Elemento, ElementoCreate } from "@/types/elemento"; 
+
+// Crear un nuevo elemento
+// src/services/elementoService.ts
+export async function createElemento(
+  elemento: ElementoCreate
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const elementoConFecha = {
+      ...elemento,
+      fecha: new Date(), // Agregar la fecha actual
+    };
+
+    const { data, error } = await supabase
+      .from("elementos")
+      .insert([elementoConFecha])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error al crear el elemento:", error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error inesperado al crear el elemento:", error);
+    return { success: false, error: "Error inesperado" };
+  }
+}
+
+// Obtener todos los elementos
+export async function getElementos(p0: { cache: string; }): Promise<Elemento[]> {
+  try {
+    const { data, error } = await supabase.from("elementos").select("*");
+
+    if (error) throw error;
+
+    // Convertir el campo fecha a un objeto Date
+    return data.map((elemento) => ({
+      ...elemento,
+      //fecha: new Date(elemento.fecha), // Convertir a Date
+    }));
+  } catch (error) {
+    console.error("Error al obtener los elementos:", error);
+    throw error;
+  }
+}
+
+// Obtener elementos no asignados a una actividad
+export async function getElementosNoAsignados(
+  actividadId: number
+): Promise<Elemento[]> {
+  try {
+    const idsAsignados = await getIdsAsignados(actividadId);
+    const { data, error } = await supabase
+      .from("elementos")
+      .select("*")
+      .not("id", "in", `(${idsAsignados})`);
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error("Error al obtener elementos no asignados:", error);
+    throw error;
+  }
+}
+
+// Obtener IDs de elementos asignados a una actividad
+async function getIdsAsignados(actividadId: number): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from("actividad_elemento")
+      .select("elemento_id")
+      .eq("actividad_id", actividadId);
+
+    if (error) throw error;
+    return data.map((item) => item.elemento_id).join(",");
+  } catch (error) {
+    console.error("Error al obtener IDs asignados:", error);
+    throw error;
+  }
+}
+
+// Actualizar un elemento
+export async function updateElemento(
+  id: number,
+  elemento: Partial<Elemento>
+): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from("elementos")
+      .update(elemento)
+      .eq("id", id);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error("Error al actualizar el elemento:", error);
+    throw error;
+  }
+}
+
+// Obtener un elemento por ID
+export async function getElementoById(id: number): Promise<Elemento | null> {
+  try {
+    const { data, error } = await supabase
+      .from("elementos")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error("Error al obtener el elemento:", error);
+    throw error;
+  }
+}
+
+// Eliminar un elemento
+export async function deleteElemento(id: number): Promise<void> {
+  try {
+    const { error } = await supabase.from("elementos").delete().eq("id", id);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error("Error al eliminar el elemento:", error);
+    throw error;
+  }
+}
+
+================
+File: src/app/actividades/columns.tsx
+================
+"use client";
+import { ColumnDef } from "@tanstack/react-table";
+import {
+  
+  Pencil,
+  Trash2,
+  CheckIcon,
+
+} from "lucide-react";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { Actividad, UNIDADES } from "@/types/actividad";
+import Link from "next/link";
+
+import { deleteActividad, updateActividad } from "@/services/actividadService";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { memo } from "react";
+import {
+  Dialog,
+
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+
+
+interface DialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  actividad: Actividad;
+}
+
+const EditableCell = memo(
+  ({
+    value,
+    onSave,
+  }: {
+    value: string;
+    onSave: (newValue: string) => void;
+  }) => {
+    const [editingValue, setEditingValue] = useState(value);
+
+    const handleSave = () => {
+      onSave(editingValue);
+    };
+
+    return (
+      <div className="flex gap-2">
+        <Input
+          value={editingValue}
+          onChange={(e) => setEditingValue(e.target.value)}
+          autoFocus
+        />
+        <Button variant="ghost" size="icon" onClick={handleSave}>
+          <CheckIcon className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  }
+);
+
+export default EditableCell;
+
+const handleDelete = async (id: string) => {
+  if (!window.confirm("¿Estás seguro de eliminar?")) return;
+
+  try {
+    await deleteActividad(id);
+    window.location.reload();
+  } catch (error) {
+    console.error("Error al eliminar el gasto:", error);
+    alert("Hubo un error al eliminar el gasto");
+  }
+};
+
+export const columns: ColumnDef<Actividad>[] = [
+  {
+    id: "select",
+    header: ({ table }) => (
+      <Checkbox
+        checked={
+          table.getIsAllPageRowsSelected() ||
+          (table.getIsSomePageRowsSelected() && "indeterminate")
+        }
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Select row"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
+  {
+    id: "codigo",
+    accessorKey: "codigo",
+    header: "Código",
+    enableGlobalFilter: true,
+    cell: ({ row }) => {
+      const actividad = row.original;
+      return (
+        <Link
+          href={`/actividad-detalle/${actividad.id}`} // Ruta dinámica
+          className="text-blue-500 hover:underline"
+        >
+          {actividad.codigo}
+        </Link>
+      );
+    },
+  },
+  {
+    id: "nombre",
+    accessorKey: "nombre",
+    enableGlobalFilter: true,
+    header: "Nombre",
+    cell: ({ row }) => {
+      const actividad = row.original;
+      return (
+        <Link
+          href={`/actividad-detalle/${actividad.id}`} // Ruta dinámica
+          className="text-blue-500 hover:underline"
+        >
+          {actividad.nombre}
+        </Link>
+      );
+    },
+  },
+  {
+    id: "descripcion",
+    accessorKey: "descripcion",
+    header: "Descripción",
+    enableGlobalFilter: true,
+  },
+  {
+    id: "unidad",
+    accessorKey: "unidad",
+    header: "Unidad",
+  },
+  {
+    id: "acciones",
+    header: "Acciones",
+    cell: ({ row }) => {
+      const [isEditing, setIsEditing] = useState(false);
+      const actividad = row.original;
+  
+      // Estados para los campos editables
+      const [codigoEditado, setCodigoEditado] = useState(actividad.codigo);
+      const [nombreEditado, setNombreEditado] = useState(actividad.nombre);
+      const [descripcionEditada, setDescripcionEditada] = useState(actividad.descripcion);
+      const [unidadEditada, setUnidadEditada] = useState(actividad.unidad);
+  
+      const handleSave = async () => {
+        const updatedActividad = {
+          ...actividad,
+          codigo: codigoEditado,
+          nombre: nombreEditado,
+          descripcion: descripcionEditada,
+          unidad: unidadEditada,
+        };
+  
+        try {
+          await updateActividad(updatedActividad.id, updatedActividad);
+          setIsEditing(false);
+          window.location.reload(); // Recargar la página para reflejar los cambios
+        } catch (error) {
+          console.error("Error al actualizar la actividad:", error);
+          alert("Hubo un error al actualizar la actividad");
+        }
+      };
+  
+      return (
+        <div className="flex gap-2">
+          {/* Botón Editar */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsEditing(true)}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+  
+          {/* Botón Eliminar */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleDelete(actividad.id.toString())}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+  
+          {/* Diálogo de edición */}
+          <Dialog open={isEditing} onOpenChange={setIsEditing}>
+            <DialogContent>
+              <DialogTitle>Editar Actividad</DialogTitle>
+              <div className="space-y-4">
+                {/* Campo Código */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Código</label>
+                  <Input
+                    value={codigoEditado}
+                    onChange={(e) => setCodigoEditado(e.target.value)}
+                    placeholder="Código"
+                  />
+                </div>
+  
+                {/* Campo Nombre */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Nombre</label>
+                  <Input
+                    value={nombreEditado}
+                    onChange={(e) => setNombreEditado(e.target.value)}
+                    placeholder="Nombre"
+                  />
+                </div>
+  
+                {/* Campo Descripción */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Descripción</label>
+                  <Input
+                    value={descripcionEditada}
+                    onChange={(e) => setDescripcionEditada(e.target.value)}
+                    placeholder="Descripción"
+                  />
+                </div>
+  
+                {/* Campo Unidad (Select) */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Unidad</label>
+                  <Select
+                    value={unidadEditada}
+                    onValueChange={(value) => setUnidadEditada(value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona una unidad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {UNIDADES.map((unidad) => (
+                        <SelectItem key={unidad} value={unidad}>
+                          {unidad}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+  
+                {/* Botones de acción */}
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsEditing(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleSave}>Guardar</Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      );
+    },
+  },
+];
+
+================
+File: src/app/actividades/NewActivityForm.tsx
+================
+// src/app/actividades/NewActivityForm.tsx
+"use client";
+
+import { useState } from "react";
+import { useForm, SubmitHandler } from "react-hook-form";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { PlusIcon } from "lucide-react";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { createActividad } from "@/services/actividadService";
+
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { UNIDADES } from "@/types/actividad";
+
+interface FormValues {
+  codigo: string;
+  nombre: string;
+  descripcion: string;
+  unidad: string;
+  precio_unitario: number;
+}
+
+export default function NewActivityForm() {
+  const [isOpen, setIsOpen] = useState(false);
+  const form = useForm<FormValues>();
+
+  const onSubmit: SubmitHandler<FormValues> = async (data) => {
+    try {
+      const result = await createActividad(data);
+      if (result.success) {
+        setIsOpen(false);
+        window.location.reload();
+      } else {
+        alert(result.error);
+      }
+    } catch (error) {
+      console.error("Error creating actividad:", error);
+      alert("Hubo un error al crear la actividad");
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          <PlusIcon className="w-4 h-4 mr-1" />
+          Agregar Actividad
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogTitle>Nueva Actividad</DialogTitle>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="codigo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Código</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="nombre"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nombre</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="descripcion"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descripción</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="unidad"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Unidad</FormLabel>
+                  <FormControl>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona una unidad" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {UNIDADES.map((unidad) => (
+                          <SelectItem key={unidad} value={unidad}>
+                            {unidad}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="flex justify-end">
+              <Button
+                variant="destructive"
+                onClick={() => setIsOpen(false)}
+                className="mr-2"
+              >
+                Cancelar
+              </Button>
+              <Button type="submit">Crear Actividad</Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+================
+File: src/app/layout.tsx
+================
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+import {
+  NavigationMenu,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
+import Link from "next/link";
+
+
+export const metadata: Metadata = {
+  title: "Analisis PU",
+  description: "App en Next",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body>
+
+       <div className="flex justify-end p-4">
+       <NavigationMenu>
+          <NavigationMenuItem>
+          <Link href="/" legacyBehavior passHref>
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                Inicio
+              </NavigationMenuLink>
+            </Link>
+            <Link href="/actividades" legacyBehavior passHref>
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                Actividades
+              </NavigationMenuLink>
+            </Link>
+            <Link href="/elementos" legacyBehavior passHref>
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                Elementos
+              </NavigationMenuLink>
+            </Link>
+            <Link href="/resumen" legacyBehavior passHref>
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                Resumen
+              </NavigationMenuLink>
+            </Link>
+          </NavigationMenuItem>
+        </NavigationMenu>
+
+       </div>
+
+        <main className="p-4">{children}</main>
+      </body>
+    </html>
+  );
+}
+
+================
+File: src/app/actividades/page.tsx
+================
+export const dynamic = "force-dynamic"; // 👈 Fuerza ruta dinámica
+
+import { getActividades } from "@/services/actividadService";
+import { Actividad } from "@/types/actividad";
+import { DataTable } from "@/components/ui/data-table";
+import { columns } from "./columns";
+import NewActivityForm from "./NewActivityForm";
+
+export default async function HomePage() {
+  const actividades: Actividad[] = await getActividades({ cache: "no-store" });
+
+  return (
+    <div className="container mx-auto py-10">
+      <h1 className="text-2xl font-bold mb-4 text-center">Base de Actividades</h1>
+
+      {/* Tabla de actividades con el botón "Agregar" */}
+      <DataTable
+        columns={columns}
+        data={actividades}
+        addButton={<NewActivityForm />}
+      />
+
+      
+    </div>
+  );
+}
+
+================
+File: src/services/actividad-elemento.ts
+================
+// src/services/actividad-elemento.ts
+import { supabase } from "@/lib/supabase";
+import { Elemento } from "@/types/elemento";
+
+
+
+
+// Crear un nuevo elemento
+
+  // Método para obtener todos los registros de la tabla actividad_elemento
+  export async function getActividadesConElementos(): Promise<any[]> {
+    
+    const { data, error } = await supabase
+      .from('actividad_elemento')
+      .select(`
+        actividad_id,
+        actividades:actividad_id (nombre),
+        elemento_id,
+        elementos:elemento_id (nombre),
+        cantidad,
+        
+      `);
+
+
+    if (error) {
+      console.error('Error fetching actividad_elemento:', error);
+      throw error;
+    }
+
+    return data || [];
+  }
+
+  export async function getElementosAsignados(actividadId: number): Promise<Elemento[]> {
+    try {
+      const { data, error } = await supabase
+        .from("actividad_elemento")
+        .select("elementos(*)")
+        .eq("actividad_id", actividadId);
+  
+      if (error) throw error;
+  
+      // Tipar la respuesta como un array de objetos con la propiedad "elementos"
+      const elementosAsignados = data as unknown as { elementos: Elemento }[];
+  
+      // Extraer y devolver solo los elementos
+      return elementosAsignados.map((item) => item.elementos);
+    } catch (error) {
+      console.error("Error fetching elementos asignados:", error);
+      return [];
+    }
+  }
+
+  // src/services/actividad-elemento.ts
+export async function getElementosNoAsignados(actividadId: number): Promise<Elemento[]> {
+  try {
+    // Obtener los IDs de los elementos asignados
+    const { data: asignados, error: errorAsignados } = await supabase
+      .from("actividad_elemento")
+      .select("elemento_id")
+      .eq("actividad_id", actividadId);
+
+    if (errorAsignados) throw errorAsignados;
+
+    const idsAsignados = asignados.map((item) => item.elemento_id);
+
+    // Obtener los elementos no asignados
+    const { data: elementos, error: errorElementos } = await supabase
+      .from("elementos")
+      .select("*")
+      .not("id", "in", `(${idsAsignados.join(",")})`);
+
+    if (errorElementos) throw errorElementos;
+    return elementos || [];
+  } catch (error) {
+    console.error("Error fetching elementos no asignados:", error);
+    return [];
+  }
+}
+
+  // src/services/actividad-elemento.ts
+// src/services/actividad-elemento.ts
+export async function asignarElemento(actividadId: number, elementoId: number): Promise<void> {
+  try {
+    const { data, error } = await supabase
+      .from("actividad_elemento")
+      .insert([{ actividad_id: actividadId, elemento_id: elementoId }])
+      .select(); // Agrega .select() para obtener la respuesta
+
+    if (error) {
+      console.error("Error en Supabase:", error);
+      throw error;
+    }
+
+    console.log("Elemento asignado correctamente:", data);
+  } catch (error) {
+    console.error("Error asignando elemento:", error);
+    throw error;
+  }
+}
+
+  // src/services/actividad-elemento.ts
+export async function desasignarElemento(actividadId: number, elementoId: number): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from("actividad_elemento")
+      .delete()
+      .eq("actividad_id", actividadId)
+      .eq("elemento_id", elementoId);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error("Error desasignando elemento:", error);
+    throw error;
+  }
+}
+
+================
+File: src/app/actividad-detalle/[id]/page.tsx
+================
+// src/app/actividad-detalle/[id]/page.tsx
+"use client"; // Marcar como componente del cliente
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { Actividad } from "@/types/actividad";
+import { Elemento } from "@/types/elemento";
+import { Button } from "@/components/ui/button";
+
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+import { getActividadById, updateActividad } from "@/services/actividadService";
+import {
+  getElementosNoAsignados,
+  getElementosAsignados,
+  asignarElemento,
+  desasignarElemento,
+} from "@/services/actividad-elemento";
+
+export default function ActividadDetallePage() {
+  const { id } = useParams(); // Obtener el ID de la URL
+  const [actividad, setActividad] = useState<Actividad | null>(null);
+  const [elementosAsignados, setElementosAsignados] = useState<Elemento[]>([]);
+  const [elementosDisponibles, setElementosDisponibles] = useState<Elemento[]>([]);
+  const [mostrarAsignarElemento, setMostrarAsignarElemento] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+
+  // Cargar la actividad y los elementos asignados al montar el componente
+  useEffect(() => {
+    const loadData = async () => {
+      if (id) {
+        const actividadId = Number(id);
+        const actividad = await getActividadById(actividadId);
+        setActividad(actividad);
+  
+        const elementosAsignados = await getElementosAsignados(actividadId);
+        setElementosAsignados(elementosAsignados);
+      }
+    };
+  
+    loadData();
+  }, [id]);
+
+  // Cargar elementos disponibles cuando se muestra la sección de asignar
+  useEffect(() => {
+    const loadElementosDisponibles = async () => {
+      if (mostrarAsignarElemento && actividad?.id) {
+        const elementos = await getElementosNoAsignados(actividad.id);
+        setElementosDisponibles(elementos);
+      }
+    };
+
+    loadElementosDisponibles();
+  }, [mostrarAsignarElemento, actividad]);
+
+  const handleAsignarElemento = async (elemento: Elemento) => {
+    if (!actividad?.id || !elemento?.id) return;
+  
+    
+    try {
+      // Asignar el elemento a la actividad
+      await asignarElemento(actividad.id, elemento.id);
+  
+      // Calcular el nuevo precio unitario
+      const nuevoPrecioUnitario = actividad.precio_unitario + elemento.precio_unitario;
+  
+      // Actualizar el precio unitario en la base de datos
+      await updateActividad(actividad.id, { precio_unitario: nuevoPrecioUnitario });
+  
+      // Actualizar el estado local de la actividad
+      const updatedActividad = { ...actividad, precio_unitario: nuevoPrecioUnitario };
+      setActividad(updatedActividad);
+  
+      // Actualizar las listas de elementos
+      setElementosDisponibles((prev) => prev.filter((e) => e.id !== elemento.id));
+      setElementosAsignados((prev) => [...prev, elemento]);
+    } catch (error) {
+      console.error("Error asignando elemento:", error);
+    } finally {
+      
+    }
+  };
+
+  // Función para desasignar un elemento de la actividad
+  const handleDesasignarElemento = async (elementoId: number) => {
+    if (!actividad?.id) return;
+
+    try {
+      await desasignarElemento(actividad.id, elementoId);
+
+      // Actualizar el precio unitario de la actividad
+      const elemento = elementosAsignados.find((e) => e.id === elementoId);
+      if (elemento) {
+        const updatedActividad = { ...actividad, precio_unitario: actividad.precio_unitario - elemento.precio_unitario };
+        setActividad(updatedActividad);
+      }
+
+      // Actualizar las listas de elementos
+      setElementosAsignados((prev) => prev.filter((e) => e.id !== elementoId));
+      setElementosDisponibles((prev) => [...prev, ...elementosAsignados.filter((e) => e.id === elementoId)]);
+    } catch (error) {
+      console.error("Error desasignando elemento:", error);
+    }
+  };
+
+  // Filtrar elementos disponibles según el término de búsqueda
+  const filteredElementos = elementosDisponibles.filter((elemento) =>
+    Object.values(elemento).some((value) =>
+      value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  );
+
+  if (!actividad) {
+    return <div>Cargando...</div>;
+  }
+
+  return (
+    <div className="container mx-auto py-10">
+      <div className="text-center mb-8">
+        <h1 className="text-2xl font-bold">Detalle de la Actividad</h1>
+      </div>
+
+      {/* Detalles de la actividad */}
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Código</TableHead>
+            <TableHead>Nombre</TableHead>
+            <TableHead>Unidad</TableHead>
+            <TableHead>Precio Unitario</TableHead>
+            <TableHead>Acciones</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableRow>
+            <TableCell>{actividad.codigo}</TableCell>
+            <TableCell>{actividad.nombre}</TableCell>
+            <TableCell>{actividad.unidad}</TableCell>
+            <TableCell>{actividad.precio_unitario}</TableCell>
+            <TableCell>
+              <Button onClick={() => setMostrarAsignarElemento(!mostrarAsignarElemento)}>
+                {mostrarAsignarElemento ? "Ocultar" : "Asignar"}
+              </Button>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+
+      {/* Elementos asignados */}
+      <div className="mt-8">
+        <h2 className="text-xl font-bold mb-4">Elementos Asignados</h2>
+        {elementosAsignados.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Código</TableHead>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Unidad</TableHead>
+                <TableHead>Precio Unitario</TableHead>
+                <TableHead>Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {elementosAsignados.map((elemento) => (
+                <TableRow key={elemento.id}>
+                  <TableCell>{elemento.codigo}</TableCell>
+                  <TableCell>{elemento.nombre}</TableCell>
+                  <TableCell>{elemento.unidad}</TableCell>
+                  <TableCell>{elemento.precio_unitario}</TableCell>
+                  <TableCell>
+                    <Button onClick={() => handleDesasignarElemento(elemento.id!)}>
+                      Quitar
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <p>No hay elementos asignados a esta actividad.</p>
+        )}
+      </div>
+
+      {/* Elementos disponibles para asignar */}
+      {mostrarAsignarElemento && (
+        <div className="mt-8">
+          <h2 className="text-xl font-bold mb-4">Elementos Disponibles</h2>
+          <div className="flex justify-end">
+            <input
+              type="text"
+              placeholder="Buscar..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              
+            />
+          </div>
+          {filteredElementos.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Código</TableHead>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Unidad</TableHead>
+                  <TableHead>Precio Unitario</TableHead>
+                  <TableHead>Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredElementos.map((elemento) => (
+                  <TableRow key={elemento.id}>
+                    <TableCell>{elemento.codigo}</TableCell>
+                    <TableCell>{elemento.nombre}</TableCell>
+                    <TableCell>{elemento.unidad}</TableCell>
+                    <TableCell>{elemento.precio_unitario}</TableCell>
+                    <TableCell>
+                      <Button onClick={() => handleAsignarElemento(elemento)}>
+                        Asignar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <p>No hay elementos disponibles para asignar.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 

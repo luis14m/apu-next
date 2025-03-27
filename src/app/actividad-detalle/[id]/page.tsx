@@ -22,7 +22,7 @@ import {
   getElementosAsignados,
   asignarElemento,
   desasignarElemento,
-} from "@/services/actividad-elemento";
+} from "@/services/actividadElementoService";
 
 export default function ActividadDetallePage() {
   const { id } = useParams(); // Obtener el ID de la URL

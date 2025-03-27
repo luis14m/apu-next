@@ -9,7 +9,8 @@ export async function createActividad(
   try {
     const { data, error } = await supabase
       .from("actividades")
-      .insert([actividad]);
+      .insert([actividad])
+      
     // .select(); // Devuelve el registro insertado
 
     if (error) {
@@ -24,14 +25,12 @@ export async function createActividad(
   }
 }
 
-export async function getActividades(
-  options = { cache: "force-cache" }
-): Promise<Actividad[]> {
+export async function getActividades(): Promise<Actividad[]> {
   try {
     const { data, error } = await supabase
       .from("actividades")
       .select("*")
-      //.order("created_at", { ascending: false });
+      .order("nombre", { ascending: true });
 
     if (error) throw error;
     return data || [];

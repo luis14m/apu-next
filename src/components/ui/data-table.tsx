@@ -27,13 +27,15 @@ import { useState, useEffect } from "react";
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
-  addButton?: React.ReactNode; // Prop para el botón "Agregar" con su lógica de diálogo
+  addButton?: React.ReactNode;
+  onRowSelectionChange?: (rows: TData[]) => void; // Nueva prop para manejar la selección de filas
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   addButton,
+  onRowSelectionChange,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [rowSelection, setRowSelection] = React.useState({});
@@ -44,41 +46,42 @@ export function DataTable<TData, TValue>({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange: (rowSelection) => {
+      setRowSelection(rowSelection);
+      if (onRowSelectionChange) {
+        const selectedRows = table
+          .getSelectedRowModel()
+          .rows.map((row) => row.original);
+        onRowSelectionChange(selectedRows);
+      }
+    },
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     state: {
       sorting,
       rowSelection,
-      globalFilter, // Conecta el globalFilter con el estado de la tabla
+      globalFilter,
     },
-    onGlobalFilterChange: setGlobalFilter, // Actualiza el globalFilter cuando cambia
-    getFilteredRowModel: getFilteredRowModel(), // Habilita el filtrado global
+    onGlobalFilterChange: setGlobalFilter,
+    getFilteredRowModel: getFilteredRowModel(),
   });
 
-  // Conecta el searchTerm con el globalFilter
   useEffect(() => {
     setGlobalFilter(searchTerm);
   }, [searchTerm]);
 
   return (
     <div className="flex flex-col space-y-4">
-      {/* Contenedor para el input y el botón */}
       <div className="flex items-center justify-between">
-        {/* Input de búsqueda a la izquierda */}
         <div className="flex-1">
           <Input
             placeholder="Buscar..."
             value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)} // Actualiza el searchTerm
+            onChange={(event) => setSearchTerm(event.target.value)}
             className="max-w-sm"
           />
         </div>
-
-        {/* Botón "Agregar" a la derecha */}
-        <div className="flex justify-end">
-          {addButton} {/* Renderiza el botón "Agregar" pasado como prop */}
-        </div>
+        <div className="flex justify-end">{addButton}</div>
       </div>
 
       <div className="rounded-md border">
@@ -86,18 +89,16 @@ export function DataTable<TData, TValue>({
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  );
-                })}
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </TableHead>
+                ))}
               </TableRow>
             ))}
           </TableHeader>
@@ -130,6 +131,10 @@ export function DataTable<TData, TValue>({
             )}
           </TableBody>
         </Table>
+      </div>
+      <div className="flex-1 text-sm text-muted-foreground">
+        {table.getFilteredSelectedRowModel().rows.length} de {" "}
+        {table.getFilteredRowModel().rows.length} fila(s) seleccionadas.
       </div>
     </div>
   );

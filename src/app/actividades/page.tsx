@@ -1,3 +1,4 @@
+// src/app/actividades/page.tsx
 export const dynamic = "force-dynamic"; // 👈 Fuerza ruta dinámica
 
 import { getActividades } from "@/services/actividadService";
@@ -19,8 +20,6 @@ export default async function HomePage() {
         data={actividades}
         addButton={<NewActivityForm />}
       />
-
-      
     </div>
   );
 }
